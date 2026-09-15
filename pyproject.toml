@@ -1,0 +1,10 @@
+[project]
+name = "pulseops"
+version = "0.1.0"
+description = "Incident and service reliability platform for alert ingestion, incident response, automated escalation, and operational observability."
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+dependencies = []
+
+[dependency-groups]
+dev = []
