@@ -3,25 +3,51 @@ name = "pulseops"
 version = "0.1.0"
 description = "Incident and service reliability platform for alert ingestion, incident response, automated escalation, and operational observability."
 readme = "README.md"
-requires-python = ">=3.12,<3.14"
+requires-python = ">=3.13,<3.14"
 dependencies = [
     "alembic>=1.20.0",
     "asyncpg>=0.31.0",
     "celery>=5.6.3",
+    "email-validator>=2.3.0",
     "fastapi>=0.141.1",
-    "pwdlib>=0.3.1",
+    "pwdlib[argon2]>=0.3.1",
     "pydantic-settings>=2.15.0",
     "pyjwt>=2.14.0",
     "redis>=8.1.0",
-    "sqlalchemy>=2.0.53",
+    "sqlalchemy[asyncio]>=2.0.53",
     "uvicorn[standard]>=0.53.0",
 ]
 
 [dependency-groups]
 dev = [
-    "httpx>=0.28.1",
-    "mypy>=2.3.1",
+    "httpx2>=2.13.0",
+    "pyright>=1.1.414",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "ruff>=0.16.7",
+]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "ASYNC"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pyright]
+include = ["app"]
+typeCheckingMode = "strict"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
 ]
