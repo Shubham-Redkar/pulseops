@@ -418,11 +418,15 @@ External Monitoring System
 
 ### Phase 1 — Foundation
 - [x] FastAPI application
-- [ ] PostgreSQL
-- [ ] SQLAlchemy 2.0
-- [ ] Alembic
+- [x] PostgreSQL setup
+- [x] SQLAlchemy 2.0
+- [x] Alembic
 - [ ] Docker
 - [x] Users, Teams, Services, Incidents
+- [x] Pydantic validation
+- [x] Error handling
+- [x] Unit and integration tests
+- [ ] Database-backed service logic
 
 ### Phase 2 — Authentication & Authorization
 - [ ] JWT authentication
@@ -534,4 +538,7 @@ Coverage focuses on: valid/invalid incident transitions, duplicate alerts, concu
 
 ## Project Status
 
-**Status: Phase 1 — Foundation in Progress** — the FastAPI foundation and initial Users, Teams, Services, and Incidents CRUD APIs have been implemented. PostgreSQL, SQLAlchemy 2.0, Alembic, and Docker remain to be integrated.
+**Status: Phase 1 — Foundation in Progress** — the FastAPI foundation, CRUD APIs,
+validation, error handling, testing structure, SQLAlchemy models, and Alembic
+migrations have been implemented. Database-backed service logic and the remaining
+Phase 1 infrastructure are in progress.
