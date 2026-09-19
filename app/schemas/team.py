@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 
-from .base import IDMixin, ORMBaseSchema, TimeStampMixin
+from .base import CleanString, IDMixin, ORMBaseSchema, TimeStampMixin
 
 
 class TeamBase(BaseModel):
@@ -8,17 +8,17 @@ class TeamBase(BaseModel):
     Common fields shared by team request and response schemas.
     """
 
-    name: str = Field(
+    name: CleanString = Field(
         min_length=1,
         max_length=255,
         description="Name of the team.",
         examples=["Payments Team"],
     )
 
-    description: str = Field(
-        min_length=1,
-        max_length=5000,
-        description="Detailed description of what the team is about.",
+    description: CleanString | None = Field(
+        default=None,
+        max_length=2000,
+        description="Description of the team.",
         examples=["Owns payment processing services and ensures reliable payment operations."],
     )
 
@@ -44,7 +44,8 @@ class CreateTeamRequest(TeamBase):
 class UpdateTeamRequest(BaseModel):
     """
     Request body for partially updating a team.
-    Only fields provided by the client will be updated.
+
+    Only fields explicitly provided by the client will be updated.
     """
 
     model_config = ConfigDict(
@@ -59,7 +60,7 @@ class UpdateTeamRequest(BaseModel):
         },
     )
 
-    name: str | None = Field(
+    name: CleanString | None = Field(
         default=None,
         min_length=1,
         max_length=255,
@@ -67,11 +68,10 @@ class UpdateTeamRequest(BaseModel):
         examples=["Payments Team"],
     )
 
-    description: str | None = Field(
+    description: CleanString | None = Field(
         default=None,
-        min_length=1,
-        max_length=5000,
-        description="Detailed description of what the team is about.",
+        max_length=2000,
+        description="Description of the team.",
         examples=["Owns payment processing services and ensures reliable payment operations."],
     )
 

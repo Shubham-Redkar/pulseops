@@ -25,13 +25,13 @@ class TeamService:
 
     async def get_team(self, team_id: UUID) -> TeamResponse:
         if (team := teams.get(team_id)) is None:
-            raise TeamNotFoundError(f"Team with ID '{team_id}' not found.")
+            raise TeamNotFoundError(team_id)
 
         return team
 
     async def update_team(self, team_id: UUID, team_data: UpdateTeamRequest) -> TeamResponse:
         if (team := teams.get(team_id)) is None:
-            raise TeamNotFoundError(f"Team with ID '{team_id}' not found.")
+            raise TeamNotFoundError(team_id)
 
         updates = team_data.model_dump(exclude_unset=True)
 
@@ -44,7 +44,7 @@ class TeamService:
 
     async def delete_team(self, team_id: UUID) -> None:
         if team_id not in teams:
-            raise TeamNotFoundError(f"Team with ID '{team_id}' not found.")
+            raise TeamNotFoundError(team_id)
 
         teams.pop(team_id)
 

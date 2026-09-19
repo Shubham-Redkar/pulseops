@@ -1,6 +1,8 @@
+from uuid import UUID
+
 from pydantic import BaseModel, ConfigDict, Field
 
-from .base import IDMixin, ORMBaseSchema, TimeStampMixin
+from .base import CleanString, IDMixin, ORMBaseSchema, TimeStampMixin
 from .enums import Environment, IncidentSeverity
 
 
@@ -9,25 +11,23 @@ class IncidentBase(BaseModel):
     Common fields shared by incident request and response schemas.
     """
 
-    title: str = Field(
+    title: CleanString = Field(
         min_length=1,
         max_length=255,
         description="Short title describing the incident.",
         examples=["Payment API error rate elevated"],
     )
 
-    description: str = Field(
+    description: CleanString = Field(
         min_length=1,
         max_length=5000,
         description="Detailed description of what is happening.",
         examples=["Error rate exceeded the production threshold."],
     )
 
-    service: str = Field(
-        min_length=1,
-        max_length=255,
-        description="Name of the service affected by the incident.",
-        examples=["payment-service"],
+    service_id: UUID = Field(
+        description="Unique identifier of the affected service.",
+        examples=["66dee2d6-f869-4152-9fb9-8461c73506ce"],
     )
 
     environment: Environment = Field(
@@ -52,7 +52,7 @@ class CreateIncidentRequest(IncidentBase):
             "example": {
                 "title": "Payment API error rate elevated",
                 "description": "Error rate exceeded the production threshold.",
-                "service": "payment-service",
+                "service_id": "66dee2d6-f869-4152-9fb9-8461c73506ce",
                 "environment": "production",
                 "severity": "critical",
             }
@@ -72,14 +72,14 @@ class UpdateIncidentRequest(BaseModel):
             "example": {
                 "title": "Payment API error rate elevated",
                 "description": "Error rate exceeded the production threshold.",
-                "service": "payment-service",
+                "service_id": "66dee2d6-f869-4152-9fb9-8461c73506ce",
                 "environment": "production",
                 "severity": "critical",
             }
         },
     )
 
-    title: str | None = Field(
+    title: CleanString | None = Field(
         default=None,
         min_length=1,
         max_length=255,
@@ -87,7 +87,7 @@ class UpdateIncidentRequest(BaseModel):
         examples=["Payment API error rate elevated"],
     )
 
-    description: str | None = Field(
+    description: CleanString | None = Field(
         default=None,
         min_length=1,
         max_length=5000,
@@ -95,12 +95,10 @@ class UpdateIncidentRequest(BaseModel):
         examples=["Error rate exceeded the production threshold."],
     )
 
-    service: str | None = Field(
+    service_id: UUID | None = Field(
         default=None,
-        min_length=1,
-        max_length=255,
-        description="Name of the service affected by the incident.",
-        examples=["payment-service"],
+        description="Unique identifier of the affected service.",
+        examples=["66dee2d6-f869-4152-9fb9-8461c73506ce"],
     )
 
     environment: Environment | None = Field(

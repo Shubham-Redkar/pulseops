@@ -25,7 +25,7 @@ class IncidentService:
 
     async def get_incident(self, incident_id: UUID) -> IncidentResponse:
         if (incident := incidents.get(incident_id)) is None:
-            raise IncidentNotFoundError(f"Incident with ID '{incident_id}' was not found.")
+            raise IncidentNotFoundError(incident_id)
 
         return incident
 
@@ -33,7 +33,7 @@ class IncidentService:
         self, incident_id: UUID, incident_data: UpdateIncidentRequest
     ) -> IncidentResponse:
         if (incident := incidents.get(incident_id)) is None:
-            raise IncidentNotFoundError(f"Incident with ID '{incident_id}' was not found.")
+            raise IncidentNotFoundError(incident_id)
 
         updates = incident_data.model_dump(exclude_unset=True)
 
@@ -46,7 +46,7 @@ class IncidentService:
 
     async def delete_incident(self, incident_id: UUID) -> None:
         if incident_id not in incidents:
-            raise IncidentNotFoundError(f"Incident with ID '{incident_id}' was not found.")
+            raise IncidentNotFoundError(incident_id)
 
         incidents.pop(incident_id)
 

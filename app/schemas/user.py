@@ -1,6 +1,8 @@
+from uuid import UUID
+
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-from .base import IDMixin, ORMBaseSchema, TimeStampMixin
+from .base import CleanString, IDMixin, ORMBaseSchema, TimeStampMixin
 from .enums import UserRole
 
 
@@ -9,16 +11,15 @@ class UserBase(BaseModel):
     Common fields shared by user request and response schemas.
     """
 
-    username: str = Field(
-        min_length=1,
-        max_length=255,
+    username: CleanString = Field(
+        min_length=3,
+        max_length=50,
         description="Username of the user.",
         examples=["john"],
     )
 
     email: EmailStr = Field(
-        min_length=1,
-        max_length=5000,
+        max_length=254,
         description="Email address of the user.",
         examples=["john@example.com"],
     )
@@ -28,10 +29,16 @@ class UserBase(BaseModel):
         examples=["admin"],
     )
 
+    team_id: UUID | None = Field(
+        default=None,
+        examples=["66dee2d6-f869-4152-9fb9-8461c73506ce"],
+        description="Unique identifier for the team.",
+    )
+
 
 class CreateUserRequest(UserBase):
     """
-    Request body for creating an user.
+    Request body for creating a user.
     """
 
     model_config = ConfigDict(
@@ -42,12 +49,14 @@ class CreateUserRequest(UserBase):
                 "email": "john@example.com",
                 "password": "SecurePassword456!",
                 "role": "admin",
+                "team_id": "550e8400-e29b-41d4-a716-446655440000",
             }
         },
     )
 
     password: str = Field(
-        min_length=6,
+        min_length=8,
+        max_length=128,
         description="Password for the user.",
         examples=["SecurePassword456!"],
     )
@@ -55,7 +64,7 @@ class CreateUserRequest(UserBase):
 
 class UpdateUserRequest(BaseModel):
     """
-    Request body for partially updating an user.
+    Request body for partially updating a user.
     Only fields provided by the client will be updated.
     """
 
@@ -66,22 +75,22 @@ class UpdateUserRequest(BaseModel):
                 "username": "john",
                 "email": "john@example.com",
                 "role": "admin",
+                "team_id": "550e8400-e29b-41d4-a716-446655440000",
             }
         },
     )
 
-    username: str | None = Field(
+    username: CleanString | None = Field(
         default=None,
-        min_length=1,
-        max_length=255,
+        min_length=3,
+        max_length=50,
         description="Username of the user.",
         examples=["john"],
     )
 
     email: EmailStr | None = Field(
         default=None,
-        min_length=1,
-        max_length=5000,
+        max_length=254,
         description="Email address of the user.",
         examples=["john@example.com"],
     )
@@ -92,6 +101,12 @@ class UpdateUserRequest(BaseModel):
         examples=["admin"],
     )
 
+    team_id: UUID | None = Field(
+        default=None,
+        examples=["66dee2d6-f869-4152-9fb9-8461c73506ce"],
+        description="Unique identifier for the team.",
+    )
+
 
 class UserResponse(
     ORMBaseSchema,
@@ -100,5 +115,5 @@ class UserResponse(
     UserBase,
 ):
     """
-    Response representation of an user.
+    Response representation of a user.
     """
