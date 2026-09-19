@@ -15,7 +15,7 @@ lint:
 	uv run ruff check .
 
 format:
-	uv run ruff format --verbose .
+	uv run ruff format .
 
 typecheck:
 	uv run pyright
