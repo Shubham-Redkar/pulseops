@@ -3,6 +3,8 @@ from uuid import UUID, uuid4
 
 from app.schemas.team import CreateTeamRequest, TeamResponse, UpdateTeamRequest
 
+from ..core.exceptions import TeamNotFoundError
+
 teams: dict[UUID, TeamResponse] = {}
 
 
@@ -23,13 +25,13 @@ class TeamService:
 
     async def get_team(self, team_id: UUID) -> TeamResponse:
         if (team := teams.get(team_id)) is None:
-            raise ValueError("Team not found")
+            raise TeamNotFoundError(f"Team with ID '{team_id}' not found")
 
         return team
 
     async def update_team(self, team_id: UUID, team_data: UpdateTeamRequest) -> TeamResponse:
         if (team := teams.get(team_id)) is None:
-            raise ValueError("Team not found")
+            raise TeamNotFoundError(f"Team with ID '{team_id}' not found")
 
         updates = team_data.model_dump(exclude_unset=True)
 
@@ -42,7 +44,7 @@ class TeamService:
 
     async def delete_team(self, team_id: UUID) -> None:
         if team_id not in teams:
-            raise ValueError("Team not found")
+            raise TeamNotFoundError(f"Team with ID '{team_id}' not found")
 
         teams.pop(team_id)
 

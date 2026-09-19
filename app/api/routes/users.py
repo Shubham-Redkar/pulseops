@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, status
 
 from ...schemas.user import CreateUserRequest, UpdateUserRequest, UserResponse
 from ...services.user_service import user_service
@@ -8,7 +8,7 @@ from ...services.user_service import user_service
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
-@router.post("", response_model=UserResponse)
+@router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(user_data: CreateUserRequest) -> UserResponse:
     return await user_service.create_user(user_data)
 
@@ -28,6 +28,6 @@ async def update_user(user_id: UUID, user_data: UpdateUserRequest) -> UserRespon
     return await user_service.update_user(user_id, user_data)
 
 
-@router.delete("/{user_id}", status_code=204)
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(user_id: UUID) -> None:
-    return await user_service.delete_user(user_id)
+    await user_service.delete_user(user_id)

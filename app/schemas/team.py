@@ -9,7 +9,6 @@ class TeamBase(BaseModel):
     """
 
     name: str = Field(
-        ...,
         min_length=1,
         max_length=255,
         description="Name of the team.",
@@ -17,7 +16,6 @@ class TeamBase(BaseModel):
     )
 
     description: str = Field(
-        ...,
         min_length=1,
         max_length=5000,
         description="Detailed description of what the team is about.",

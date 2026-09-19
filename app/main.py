@@ -1,12 +1,23 @@
 from fastapi import FastAPI
 
+from .api.errors import app_exception_handler, conflict_handler, not_found_handler
 from .api.routes.router import api_router
+from .core.exceptions import AppException, ConflictError, NotFoundError
 
 app = FastAPI(
     title="PulseOps API",
     version="1.0.0",
     description="API for managing production incidents and service reliability.",
 )
+
+app.add_exception_handler(
+    ConflictError,
+    conflict_handler,
+)
+
+app.add_exception_handler(NotFoundError, not_found_handler)
+
+app.add_exception_handler(AppException, app_exception_handler)
 
 
 @app.get("/", tags=["Root"])

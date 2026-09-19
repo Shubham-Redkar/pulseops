@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
+from ..core.exceptions import ServiceNotFoundError
 from ..schemas.service import CreateServiceRequest, ServiceResponse, UpdateServiceRequest
 
 services: dict[UUID, ServiceResponse] = {}
@@ -25,7 +26,7 @@ class ServiceManager:
 
     async def get_service(self, service_id: UUID) -> ServiceResponse:
         if (service := services.get(service_id)) is None:
-            raise ValueError("Service not found")
+            raise ServiceNotFoundError(f"Service with ID '{service_id}' was not found.")
 
         return service
 
@@ -33,7 +34,7 @@ class ServiceManager:
         self, service_id: UUID, service_data: UpdateServiceRequest
     ) -> ServiceResponse:
         if (service := services.get(service_id)) is None:
-            raise ValueError("Service not found")
+            raise ServiceNotFoundError(f"Service with ID '{service_id}' was not found.")
 
         updates = service_data.model_dump(exclude_unset=True)
 
@@ -46,7 +47,7 @@ class ServiceManager:
 
     async def delete_service(self, service_id: UUID) -> None:
         if service_id not in services:
-            raise ValueError("Service not found")
+            raise ServiceNotFoundError(f"Service with ID '{service_id}' was not found.")
 
         services.pop(service_id)
 

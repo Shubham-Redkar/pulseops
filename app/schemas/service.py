@@ -11,7 +11,6 @@ class ServiceBase(BaseModel):
     """
 
     name: str = Field(
-        ...,
         min_length=1,
         max_length=255,
         description="Name of the service.",
@@ -19,7 +18,6 @@ class ServiceBase(BaseModel):
     )
 
     description: str = Field(
-        ...,
         min_length=1,
         max_length=5000,
         description="Detailed description of the service.",
@@ -27,7 +25,6 @@ class ServiceBase(BaseModel):
     )
 
     team_id: UUID = Field(
-        ...,
         examples=["66dee2d6-f869-4152-9fb9-8461c73506ce"],
         description="Unique identifier for the team.",
     )
