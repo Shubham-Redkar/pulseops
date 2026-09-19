@@ -47,7 +47,7 @@ class CreateUserRequest(UserBase):
     )
 
     password: str = Field(
-        min_length=8,
+        min_length=6,
         description="Password for the user.",
         examples=["SecurePassword456!"],
     )
