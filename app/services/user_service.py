@@ -25,13 +25,13 @@ class UserService:
 
     async def get_user(self, user_id: UUID) -> UserResponse:
         if (user := users.get(user_id)) is None:
-            raise UserNotFoundError(f"User with ID '{user_id}' not found")
+            raise UserNotFoundError(user_id)
 
         return user
 
     async def update_user(self, user_id: UUID, user_data: UpdateUserRequest) -> UserResponse:
         if (user := users.get(user_id)) is None:
-            raise UserNotFoundError(f"User with ID '{user_id}' not found")
+            raise UserNotFoundError(user_id)
 
         updates = user_data.model_dump(exclude_unset=True)
 
@@ -44,7 +44,7 @@ class UserService:
 
     async def delete_user(self, user_id: UUID) -> None:
         if user_id not in users:
-            raise UserNotFoundError(f"User with ID '{user_id}' not found")
+            raise UserNotFoundError(user_id)
 
         users.pop(user_id)
 

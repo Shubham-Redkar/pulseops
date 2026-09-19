@@ -2,7 +2,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from .base import IDMixin, ORMBaseSchema, TimeStampMixin
+from .base import CleanString, IDMixin, ORMBaseSchema, TimeStampMixin
 
 
 class ServiceBase(BaseModel):
@@ -10,16 +10,16 @@ class ServiceBase(BaseModel):
     Common fields shared by service request and response schemas.
     """
 
-    name: str = Field(
+    name: CleanString = Field(
         min_length=1,
         max_length=255,
         description="Name of the service.",
         examples=["payment-service"],
     )
 
-    description: str = Field(
-        min_length=1,
-        max_length=5000,
+    description: CleanString | None = Field(
+        default=None,
+        max_length=2000,
         description="Detailed description of the service.",
         examples=["Handles payment processing and transaction management."],
     )
@@ -64,7 +64,7 @@ class UpdateServiceRequest(BaseModel):
         },
     )
 
-    name: str | None = Field(
+    name: CleanString | None = Field(
         default=None,
         min_length=1,
         max_length=255,
@@ -72,10 +72,9 @@ class UpdateServiceRequest(BaseModel):
         examples=["payment-service"],
     )
 
-    description: str | None = Field(
+    description: CleanString | None = Field(
         default=None,
-        min_length=1,
-        max_length=5000,
+        max_length=2000,
         description="Detailed description of the service.",
         examples=["Handles payment processing and transaction management."],
     )

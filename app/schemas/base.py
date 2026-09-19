@@ -1,7 +1,8 @@
 from datetime import datetime
+from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 
 
 class ORMBaseSchema(BaseModel):
@@ -29,8 +30,22 @@ class CreatedAtMixin(BaseModel):
 
 
 class TimeStampMixin(CreatedAtMixin):
-    updated_at: datetime | None = Field(
-        default=None,
+    updated_at: datetime = Field(
         examples=["2026-06-10T08:00:00Z"],
         description="Timestamp indicating when the resource was last updated.",
     )
+
+
+def strip_and_validate_string(value: str) -> str:
+    """
+    Strip leading/trailing whitespace and reject empty/whitespace-only strings.
+    """
+    value = value.strip()
+
+    if not value:
+        raise ValueError("Must not be empty or whitespace")
+
+    return value
+
+
+CleanString = Annotated[str, AfterValidator(strip_and_validate_string)]
