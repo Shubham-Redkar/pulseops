@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, status
 
 from ...schemas.team import CreateTeamRequest, TeamResponse, UpdateTeamRequest
 from ...services.team_service import team_service
@@ -8,7 +8,7 @@ from ...services.team_service import team_service
 router = APIRouter(prefix="/teams", tags=["Teams"])
 
 
-@router.post("", response_model=TeamResponse)
+@router.post("", response_model=TeamResponse, status_code=status.HTTP_201_CREATED)
 async def create_team(team_data: CreateTeamRequest) -> TeamResponse:
     return await team_service.create_team(team_data)
 
@@ -28,6 +28,6 @@ async def update_team(team_id: UUID, team_data: UpdateTeamRequest) -> TeamRespon
     return await team_service.update_team(team_id, team_data)
 
 
-@router.delete("/{team_id}", status_code=204)
+@router.delete("/{team_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_team(team_id: UUID) -> None:
-    return await team_service.delete_team(team_id)
+    await team_service.delete_team(team_id)

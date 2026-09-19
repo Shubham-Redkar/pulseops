@@ -10,7 +10,6 @@ class IncidentBase(BaseModel):
     """
 
     title: str = Field(
-        ...,
         min_length=1,
         max_length=255,
         description="Short title describing the incident.",
@@ -18,7 +17,6 @@ class IncidentBase(BaseModel):
     )
 
     description: str = Field(
-        ...,
         min_length=1,
         max_length=5000,
         description="Detailed description of what is happening.",
@@ -26,7 +24,6 @@ class IncidentBase(BaseModel):
     )
 
     service: str = Field(
-        ...,
         min_length=1,
         max_length=255,
         description="Name of the service affected by the incident.",
@@ -34,13 +31,11 @@ class IncidentBase(BaseModel):
     )
 
     environment: Environment = Field(
-        ...,
         description="Environment where the incident occurred.",
         examples=["production"],
     )
 
     severity: IncidentSeverity = Field(
-        ...,
         description="Severity level indicating the impact of the incident.",
         examples=["critical"],
     )

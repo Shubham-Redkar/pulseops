@@ -10,7 +10,6 @@ class UserBase(BaseModel):
     """
 
     username: str = Field(
-        ...,
         min_length=1,
         max_length=255,
         description="Username of the user.",
@@ -18,7 +17,6 @@ class UserBase(BaseModel):
     )
 
     email: EmailStr = Field(
-        ...,
         min_length=1,
         max_length=5000,
         description="Email address of the user.",
@@ -26,7 +24,6 @@ class UserBase(BaseModel):
     )
 
     role: UserRole = Field(
-        ...,
         description="Role assigned to the user.",
         examples=["admin"],
     )
@@ -50,7 +47,6 @@ class CreateUserRequest(UserBase):
     )
 
     password: str = Field(
-        ...,
         min_length=8,
         description="Password for the user.",
         examples=["SecurePassword456!"],
