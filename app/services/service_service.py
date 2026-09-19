@@ -26,7 +26,7 @@ class ServiceManager:
 
     async def get_service(self, service_id: UUID) -> ServiceResponse:
         if (service := services.get(service_id)) is None:
-            raise ServiceNotFoundError(f"Service with ID '{service_id}' was not found.")
+            raise ServiceNotFoundError(f"Service with ID '{service_id}' not found.")
 
         return service
 
@@ -34,7 +34,7 @@ class ServiceManager:
         self, service_id: UUID, service_data: UpdateServiceRequest
     ) -> ServiceResponse:
         if (service := services.get(service_id)) is None:
-            raise ServiceNotFoundError(f"Service with ID '{service_id}' was not found.")
+            raise ServiceNotFoundError(f"Service with ID '{service_id}' not found.")
 
         updates = service_data.model_dump(exclude_unset=True)
 
@@ -47,7 +47,7 @@ class ServiceManager:
 
     async def delete_service(self, service_id: UUID) -> None:
         if service_id not in services:
-            raise ServiceNotFoundError(f"Service with ID '{service_id}' was not found.")
+            raise ServiceNotFoundError(f"Service with ID '{service_id}' not found.")
 
         services.pop(service_id)
 
