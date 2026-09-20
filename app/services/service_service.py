@@ -1,55 +1,55 @@
-from datetime import UTC, datetime
+from typing import cast
 from uuid import UUID, uuid4
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from ..core.exceptions import ServiceNotFoundError
+from ..db.models.service import Service
+from ..repositories.service_repository import ServiceRepository
 from ..schemas.service import CreateServiceRequest, ServiceResponse, UpdateServiceRequest
+from ..types.service import ServiceUpdateData
 
 services: dict[UUID, ServiceResponse] = {}
 
 
 class ServiceManager:
+    def __init__(self, session: AsyncSession, repository: ServiceRepository) -> None:
+        self.session = session
+        self.repository = repository
+
     async def create_service(self, service_data: CreateServiceRequest) -> ServiceResponse:
-        now = datetime.now(UTC)
+        service = Service(id=uuid4(), **service_data.model_dump())
 
-        service_id = uuid4()
+        async with self.session.begin():
+            service = await self.repository.create(service)
 
-        service = ServiceResponse(
-            id=service_id, **service_data.model_dump(), created_at=now, updated_at=now
-        )
-
-        services[service_id] = service
-
-        return service
+        return ServiceResponse.model_validate(service)
 
     async def get_services(self) -> list[ServiceResponse]:
-        return list(services.values())
+        services = await self.repository.get_all()
+
+        return [ServiceResponse.model_validate(service) for service in services]
 
     async def get_service(self, service_id: UUID) -> ServiceResponse:
-        if (service := services.get(service_id)) is None:
+        if (service := await self.repository.get_by_id(service_id)) is None:
             raise ServiceNotFoundError(service_id)
 
-        return service
+        return ServiceResponse.model_validate(service)
 
     async def update_service(
         self, service_id: UUID, service_data: UpdateServiceRequest
     ) -> ServiceResponse:
-        if (service := services.get(service_id)) is None:
-            raise ServiceNotFoundError(service_id)
+        update_data = cast(ServiceUpdateData, service_data.model_dump(exclude_unset=True))
 
-        updates = service_data.model_dump(exclude_unset=True)
+        async with self.session.begin():
+            if (service := await self.repository.update(service_id, update_data)) is None:
+                raise ServiceNotFoundError(service_id)
 
-        for field, value in updates.items():
-            setattr(service, field, value)
-
-        service.updated_at = datetime.now(UTC)
-
-        return service
+        return ServiceResponse.model_validate(service)
 
     async def delete_service(self, service_id: UUID) -> None:
-        if service_id not in services:
-            raise ServiceNotFoundError(service_id)
+        async with self.session.begin():
+            deleted = await self.repository.delete(service_id)
 
-        services.pop(service_id)
-
-
-service_manager = ServiceManager()
+            if not deleted:
+                raise ServiceNotFoundError(service_id)

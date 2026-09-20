@@ -7,7 +7,7 @@ from ...schemas.user import (
     UpdateUserRequest,
     UserResponse,
 )
-from ...services.user_service import user_service
+from ..dependencies import UserServiceDep
 
 router = APIRouter(
     prefix="/users",
@@ -22,6 +22,7 @@ router = APIRouter(
 )
 async def create_user(
     user_data: CreateUserRequest,
+    user_service: UserServiceDep,
 ) -> UserResponse:
     return await user_service.create_user(user_data)
 
@@ -30,7 +31,9 @@ async def create_user(
     "",
     response_model=list[UserResponse],
 )
-async def get_users() -> list[UserResponse]:
+async def get_users(
+    user_service: UserServiceDep,
+) -> list[UserResponse]:
     return await user_service.get_users()
 
 
@@ -40,6 +43,7 @@ async def get_users() -> list[UserResponse]:
 )
 async def get_user(
     user_id: UUID,
+    user_service: UserServiceDep,
 ) -> UserResponse:
     return await user_service.get_user(user_id)
 
@@ -51,6 +55,7 @@ async def get_user(
 async def update_user(
     user_id: UUID,
     user_data: UpdateUserRequest,
+    user_service: UserServiceDep,
 ) -> UserResponse:
     return await user_service.update_user(
         user_id,
@@ -64,5 +69,6 @@ async def update_user(
 )
 async def delete_user(
     user_id: UUID,
+    user_service: UserServiceDep,
 ) -> None:
     await user_service.delete_user(user_id)

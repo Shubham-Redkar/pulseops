@@ -1,52 +1,57 @@
-from datetime import UTC, datetime
+from typing import cast
 from uuid import UUID, uuid4
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas.team import CreateTeamRequest, TeamResponse, UpdateTeamRequest
 
 from ..core.exceptions import TeamNotFoundError
+from ..db.models.team import Team
+from ..repositories.team_repository import TeamRepository
+from ..types.team import TeamUpdateData
 
 teams: dict[UUID, TeamResponse] = {}
 
 
 class TeamService:
+    def __init__(self, session: AsyncSession, repository: TeamRepository) -> None:
+        self.session = session
+        self.repository = repository
+
     async def create_team(self, team_data: CreateTeamRequest) -> TeamResponse:
-        now = datetime.now(UTC)
+        team = Team(
+            id=uuid4(),
+            **team_data.model_dump(),
+        )
 
-        team_id = uuid4()
+        async with self.session.begin():
+            team = await self.repository.create(team)
 
-        team = TeamResponse(id=team_id, **team_data.model_dump(), created_at=now, updated_at=now)
-
-        teams[team_id] = team
-
-        return team
+        return TeamResponse.model_validate(team)
 
     async def get_teams(self) -> list[TeamResponse]:
-        return list(teams.values())
+        teams = await self.repository.get_all()
+
+        return [TeamResponse.model_validate(team) for team in teams]
 
     async def get_team(self, team_id: UUID) -> TeamResponse:
-        if (team := teams.get(team_id)) is None:
+        if (team := await self.repository.get_by_id(team_id)) is None:
             raise TeamNotFoundError(team_id)
 
-        return team
+        return TeamResponse.model_validate(team)
 
     async def update_team(self, team_id: UUID, team_data: UpdateTeamRequest) -> TeamResponse:
-        if (team := teams.get(team_id)) is None:
-            raise TeamNotFoundError(team_id)
+        update_data = cast(TeamUpdateData, team_data.model_dump(exclude_unset=True))
 
-        updates = team_data.model_dump(exclude_unset=True)
+        async with self.session.begin():
+            if (team := await self.repository.update(team_id, update_data)) is None:
+                raise TeamNotFoundError(team_id)
 
-        for field, value in updates.items():
-            setattr(team, field, value)
-
-        team.updated_at = datetime.now(UTC)
-
-        return team
+        return TeamResponse.model_validate(team)
 
     async def delete_team(self, team_id: UUID) -> None:
-        if team_id not in teams:
-            raise TeamNotFoundError(team_id)
+        async with self.session.begin():
+            deleted = await self.repository.delete(team_id)
 
-        teams.pop(team_id)
-
-
-team_service = TeamService()
+            if not deleted:
+                raise TeamNotFoundError(team_id)

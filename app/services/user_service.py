@@ -1,52 +1,73 @@
-from datetime import UTC, datetime
+from typing import cast
 from uuid import UUID, uuid4
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.exceptions import UserNotFoundError
+from app.db.models.user import User
+from app.repositories.user_repository import UserRepository
 from app.schemas.user import CreateUserRequest, UpdateUserRequest, UserResponse
-
-from ..core.exceptions import UserNotFoundError
-
-users: dict[UUID, UserResponse] = {}
+from app.types.user import UserUpdateData
 
 
 class UserService:
-    async def create_user(self, user_data: CreateUserRequest) -> UserResponse:
-        now = datetime.now(UTC)
+    def __init__(
+        self,
+        session: AsyncSession,
+        repository: UserRepository,
+    ) -> None:
+        self.session = session
+        self.repository = repository
 
-        user_id = uuid4()
+    async def create_user(
+        self,
+        user_data: CreateUserRequest,
+    ) -> UserResponse:
 
-        user = UserResponse(id=user_id, **user_data.model_dump(), created_at=now, updated_at=now)
+        user = User(
+            id=uuid4(),
+            **user_data.model_dump(),
+        )
 
-        users[user_id] = user
+        async with self.session.begin():
+            user = await self.repository.create(user)
 
-        return user
+        return UserResponse.model_validate(user)
 
     async def get_users(self) -> list[UserResponse]:
-        return list(users.values())
+        users = await self.repository.get_all()
+
+        return [UserResponse.model_validate(user) for user in users]
 
     async def get_user(self, user_id: UUID) -> UserResponse:
-        if (user := users.get(user_id)) is None:
+        if (user := await self.repository.get_by_id(user_id)) is None:
             raise UserNotFoundError(user_id)
 
-        return user
+        return UserResponse.model_validate(user)
 
-    async def update_user(self, user_id: UUID, user_data: UpdateUserRequest) -> UserResponse:
-        if (user := users.get(user_id)) is None:
-            raise UserNotFoundError(user_id)
+    async def update_user(
+        self,
+        user_id: UUID,
+        user_data: UpdateUserRequest,
+    ) -> UserResponse:
+        update_data = cast(
+            UserUpdateData,
+            user_data.model_dump(exclude_unset=True),
+        )
+        async with self.session.begin():
+            if (
+                user := await self.repository.update(
+                    user_id,
+                    update_data,
+                )
+            ) is None:
+                raise UserNotFoundError(user_id)
 
-        updates = user_data.model_dump(exclude_unset=True)
-
-        for field, value in updates.items():
-            setattr(user, field, value)
-
-        user.updated_at = datetime.now(UTC)
-
-        return user
+        return UserResponse.model_validate(user)
 
     async def delete_user(self, user_id: UUID) -> None:
-        if user_id not in users:
-            raise UserNotFoundError(user_id)
+        async with self.session.begin():
+            deleted = await self.repository.delete(user_id)
 
-        users.pop(user_id)
-
-
-user_service = UserService()
+            if not deleted:
+                raise UserNotFoundError(user_id)
