@@ -1,54 +1,83 @@
-from datetime import UTC, datetime
+from typing import cast
 from uuid import UUID, uuid4
 
-from ..core.exceptions import IncidentNotFoundError
-from ..schemas.incident import CreateIncidentRequest, IncidentResponse, UpdateIncidentRequest
+from sqlalchemy.ext.asyncio import AsyncSession
 
-incidents: dict[UUID, IncidentResponse] = {}
+from ..core.exceptions import IncidentNotFoundError
+from ..db.models.incident import Incident
+from ..repositories.incident_repository import IncidentRepository
+from ..schemas.incident import (
+    CreateIncidentRequest,
+    IncidentResponse,
+    UpdateIncidentRequest,
+)
+from ..types.incident import IncidentUpdateData
 
 
 class IncidentService:
-    async def create_incident(self, incident_data: CreateIncidentRequest) -> IncidentResponse:
-        now = datetime.now(UTC)
-        incident_id = uuid4()
+    def __init__(
+        self,
+        session: AsyncSession,
+        repository: IncidentRepository,
+    ) -> None:
+        self.session = session
+        self.repository = repository
 
-        incident = IncidentResponse(
-            id=incident_id, **incident_data.model_dump(), created_at=now, updated_at=now
+    async def create_incident(
+        self,
+        incident_data: CreateIncidentRequest,
+    ) -> IncidentResponse:
+        incident = Incident(
+            id=uuid4(),
+            **incident_data.model_dump(),
         )
 
-        incidents[incident_id] = incident
+        async with self.session.begin():
+            incident = await self.repository.create(incident)
 
-        return incident
+        return IncidentResponse.model_validate(incident)
 
     async def get_incidents(self) -> list[IncidentResponse]:
-        return list(incidents.values())
+        incidents = await self.repository.get_all()
 
-    async def get_incident(self, incident_id: UUID) -> IncidentResponse:
-        if (incident := incidents.get(incident_id)) is None:
+        return [IncidentResponse.model_validate(incident) for incident in incidents]
+
+    async def get_incident(
+        self,
+        incident_id: UUID,
+    ) -> IncidentResponse:
+        if (incident := await self.repository.get_by_id(incident_id)) is None:
             raise IncidentNotFoundError(incident_id)
 
-        return incident
+        return IncidentResponse.model_validate(incident)
 
     async def update_incident(
-        self, incident_id: UUID, incident_data: UpdateIncidentRequest
+        self,
+        incident_id: UUID,
+        incident_data: UpdateIncidentRequest,
     ) -> IncidentResponse:
-        if (incident := incidents.get(incident_id)) is None:
-            raise IncidentNotFoundError(incident_id)
+        update_data = cast(
+            IncidentUpdateData,
+            incident_data.model_dump(exclude_unset=True),
+        )
 
-        updates = incident_data.model_dump(exclude_unset=True)
+        async with self.session.begin():
+            if (
+                incident := await self.repository.update(
+                    incident_id,
+                    update_data,
+                )
+            ) is None:
+                raise IncidentNotFoundError(incident_id)
 
-        for field, value in updates.items():
-            setattr(incident, field, value)
+        return IncidentResponse.model_validate(incident)
 
-        incident.updated_at = datetime.now(UTC)
+    async def delete_incident(
+        self,
+        incident_id: UUID,
+    ) -> None:
+        async with self.session.begin():
+            deleted = await self.repository.delete(incident_id)
 
-        return incident
-
-    async def delete_incident(self, incident_id: UUID) -> None:
-        if incident_id not in incidents:
-            raise IncidentNotFoundError(incident_id)
-
-        incidents.pop(incident_id)
-
-
-incident_service = IncidentService()
+            if not deleted:
+                raise IncidentNotFoundError(incident_id)

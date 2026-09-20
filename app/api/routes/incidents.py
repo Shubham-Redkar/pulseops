@@ -7,7 +7,7 @@ from ...schemas.incident import (
     IncidentResponse,
     UpdateIncidentRequest,
 )
-from ...services.incident_service import incident_service
+from ..dependencies import IncidentServiceDep
 
 router = APIRouter(
     prefix="/incidents",
@@ -22,6 +22,7 @@ router = APIRouter(
 )
 async def create_incident(
     incident_data: CreateIncidentRequest,
+    incident_service: IncidentServiceDep,
 ) -> IncidentResponse:
     return await incident_service.create_incident(incident_data)
 
@@ -30,7 +31,9 @@ async def create_incident(
     "",
     response_model=list[IncidentResponse],
 )
-async def get_incidents() -> list[IncidentResponse]:
+async def get_incidents(
+    incident_service: IncidentServiceDep,
+) -> list[IncidentResponse]:
     return await incident_service.get_incidents()
 
 
@@ -40,6 +43,7 @@ async def get_incidents() -> list[IncidentResponse]:
 )
 async def get_incident(
     incident_id: UUID,
+    incident_service: IncidentServiceDep,
 ) -> IncidentResponse:
     return await incident_service.get_incident(incident_id)
 
@@ -51,6 +55,7 @@ async def get_incident(
 async def update_incident(
     incident_id: UUID,
     incident_data: UpdateIncidentRequest,
+    incident_service: IncidentServiceDep,
 ) -> IncidentResponse:
     return await incident_service.update_incident(
         incident_id,
@@ -64,5 +69,6 @@ async def update_incident(
 )
 async def delete_incident(
     incident_id: UUID,
+    incident_service: IncidentServiceDep,
 ) -> None:
     await incident_service.delete_incident(incident_id)

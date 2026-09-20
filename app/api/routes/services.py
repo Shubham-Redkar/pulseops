@@ -7,7 +7,7 @@ from ...schemas.service import (
     ServiceResponse,
     UpdateServiceRequest,
 )
-from ...services.service_service import service_manager
+from ..dependencies import ServiceManagerDep
 
 router = APIRouter(
     prefix="/services",
@@ -22,6 +22,7 @@ router = APIRouter(
 )
 async def create_service(
     service_data: CreateServiceRequest,
+    service_manager: ServiceManagerDep,
 ) -> ServiceResponse:
     return await service_manager.create_service(service_data)
 
@@ -30,7 +31,9 @@ async def create_service(
     "",
     response_model=list[ServiceResponse],
 )
-async def get_services() -> list[ServiceResponse]:
+async def get_services(
+    service_manager: ServiceManagerDep,
+) -> list[ServiceResponse]:
     return await service_manager.get_services()
 
 
@@ -40,6 +43,7 @@ async def get_services() -> list[ServiceResponse]:
 )
 async def get_service(
     service_id: UUID,
+    service_manager: ServiceManagerDep,
 ) -> ServiceResponse:
     return await service_manager.get_service(service_id)
 
@@ -51,6 +55,7 @@ async def get_service(
 async def update_service(
     service_id: UUID,
     service_data: UpdateServiceRequest,
+    service_manager: ServiceManagerDep,
 ) -> ServiceResponse:
     return await service_manager.update_service(
         service_id,
@@ -64,5 +69,6 @@ async def update_service(
 )
 async def delete_service(
     service_id: UUID,
+    service_manager: ServiceManagerDep,
 ) -> None:
     await service_manager.delete_service(service_id)

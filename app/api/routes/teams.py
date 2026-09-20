@@ -2,12 +2,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, status
 
+from ...api.dependencies import TeamServiceDep
 from ...schemas.team import (
     CreateTeamRequest,
     TeamResponse,
     UpdateTeamRequest,
 )
-from ...services.team_service import team_service
 
 router = APIRouter(
     prefix="/teams",
@@ -22,6 +22,7 @@ router = APIRouter(
 )
 async def create_team(
     team_data: CreateTeamRequest,
+    team_service: TeamServiceDep,
 ) -> TeamResponse:
     return await team_service.create_team(team_data)
 
@@ -30,7 +31,9 @@ async def create_team(
     "",
     response_model=list[TeamResponse],
 )
-async def get_teams() -> list[TeamResponse]:
+async def get_teams(
+    team_service: TeamServiceDep,
+) -> list[TeamResponse]:
     return await team_service.get_teams()
 
 
@@ -40,6 +43,7 @@ async def get_teams() -> list[TeamResponse]:
 )
 async def get_team(
     team_id: UUID,
+    team_service: TeamServiceDep,
 ) -> TeamResponse:
     return await team_service.get_team(team_id)
 
@@ -51,11 +55,9 @@ async def get_team(
 async def update_team(
     team_id: UUID,
     team_data: UpdateTeamRequest,
+    team_service: TeamServiceDep,
 ) -> TeamResponse:
-    return await team_service.update_team(
-        team_id,
-        team_data,
-    )
+    return await team_service.update_team(team_id, team_data)
 
 
 @router.delete(
@@ -64,5 +66,6 @@ async def update_team(
 )
 async def delete_team(
     team_id: UUID,
+    team_service: TeamServiceDep,
 ) -> None:
     await team_service.delete_team(team_id)
