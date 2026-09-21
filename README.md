@@ -134,6 +134,17 @@ OPEN → RESOLVED           ❌
 RESOLVED → INVESTIGATING  ❌
 ```
 
+### Pagination
+
+Collection endpoints support limit/offset pagination:
+
+GET /api/v1/users?limit=20&offset=0
+GET /api/v1/teams?limit=20&offset=0
+GET /api/v1/services?limit=20&offset=0
+GET /api/v1/incidents?limit=20&offset=0
+
+Paginated responses include the requested limit, offset, total record count, and the current page of items.
+
 ### On-Call & Assignment
 
 ```
@@ -264,6 +275,22 @@ PulseOps starts as a modular monolith rather than a microservices split.
 ```
 
 Nginx sits in front of the FastAPI application as a reverse proxy in production.
+
+### Application Architecture
+
+```text
+Client
+  ↓
+FastAPI Route
+  ↓
+Service Layer
+  ↓
+Repository Layer
+  ↓
+SQLAlchemy AsyncSession
+  ↓
+PostgreSQL
+```
 
 ## Tech Stack
 
@@ -418,15 +445,20 @@ External Monitoring System
 
 ### Phase 1 — Foundation
 - [x] FastAPI application
-- [x] PostgreSQL setup
-- [x] SQLAlchemy 2.0
-- [x] Alembic
+- [x] PostgreSQL integration
+- [x] SQLAlchemy 2.0 models
+- [x] Alembic migrations
 - [ ] Docker
 - [x] Users, Teams, Services, Incidents
-- [x] Pydantic validation
-- [x] Error handling
-- [x] Unit and integration tests
-- [ ] Database-backed service logic
+- [x] Pydantic request/response validation
+- [x] Global error handling
+- [x] Request ID middleware
+- [x] Database-backed service logic
+- [x] Repository layer
+- [x] Pagination for collection endpoints
+- [x] Unit tests
+- [x] API integration tests
+- [ ] Database integration tests
 
 ### Phase 2 — Authentication & Authorization
 - [ ] JWT authentication
@@ -459,7 +491,9 @@ External Monitoring System
 - [ ] Duplicate notification prevention
 
 ### Phase 7 — Observability
-- [ ] Structured logging & request IDs
+- [x] Request IDs
+- [x] Basic health checks
+- [ ] Structured logging 
 - [ ] Metrics & health checks
 - [ ] Prometheus integration
 - [ ] OpenTelemetry tracing
@@ -538,7 +572,4 @@ Coverage focuses on: valid/invalid incident transitions, duplicate alerts, concu
 
 ## Project Status
 
-**Status: Phase 1 — Foundation in Progress** — the FastAPI foundation, CRUD APIs,
-validation, error handling, testing structure, SQLAlchemy models, and Alembic
-migrations have been implemented. Database-backed service logic and the remaining
-Phase 1 infrastructure are in progress.
+**Status: Phase 1 — Foundation in Progress** — the FastAPI foundation, CRUD APIs for Users, Teams, Services, and Incidents, Pydantic validation, global error handling, request ID middleware, SQLAlchemy models, Alembic migrations, PostgreSQL integration, repository/service architecture, database-backed CRUD operations, and pagination have been implemented. Docker and database integration tests remain in progress.
