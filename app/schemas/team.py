@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 
-from .base import CleanString, IDMixin, ORMBaseSchema, TimeStampMixin
+from .base import CleanString, IDMixin, ORMBaseSchema, TimestampMixin
 
 
 class TeamBase(BaseModel):
@@ -79,7 +79,7 @@ class UpdateTeamRequest(BaseModel):
 class TeamResponse(
     ORMBaseSchema,
     IDMixin,
-    TimeStampMixin,
+    TimestampMixin,
     TeamBase,
 ):
     """
