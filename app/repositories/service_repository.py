@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db.models.service import Service
@@ -8,6 +8,10 @@ from ..types.service import ServiceUpdateData
 
 
 class ServiceRepository:
+    """
+    Repository for service persistence operations.
+    """
+
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
@@ -18,17 +22,25 @@ class ServiceRepository:
 
         return service
 
-    async def get_all(self) -> list[Service]:
-        stmt = select(Service)
-
-        result = await self.session.scalars(stmt)
-
-        return list(result.all())
-
     async def get_by_id(self, service_id: UUID) -> Service | None:
         stmt = select(Service).where(Service.id == service_id)
 
         return await self.session.scalar(stmt)
+
+    async def get_all(
+        self,
+        limit: int,
+        offset: int,
+    ) -> tuple[list[Service], int]:
+        count_stmt = select(func.count()).select_from(Service)
+
+        total = await self.session.scalar(count_stmt)
+
+        stmt = select(Service).order_by(Service.created_at.desc()).limit(limit).offset(offset)
+
+        result = await self.session.scalars(stmt)
+
+        return list(result.all()), total or 0
 
     async def update(self, service_id: UUID, service_data: ServiceUpdateData) -> Service | None:
         if not service_data:

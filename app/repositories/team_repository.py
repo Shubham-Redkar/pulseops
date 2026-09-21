@@ -1,6 +1,7 @@
+from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db.models.team import Team
@@ -8,6 +9,10 @@ from ..types.team import TeamUpdateData
 
 
 class TeamRepository:
+    """
+    Repository for team persistence operations.
+    """
+
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
@@ -18,23 +23,32 @@ class TeamRepository:
 
         return team
 
-    async def get_all(self) -> list[Team]:
-        stmt = select(Team)
-
-        result = await self.session.scalars(stmt)
-
-        return list(result.all())
-
     async def get_by_id(self, team_id: UUID) -> Team | None:
         stmt = select(Team).where(Team.id == team_id)
 
         return await self.session.scalar(stmt)
 
-    async def update(self, team_id: UUID, team_data: TeamUpdateData) -> Team | None:
-        if not team_data:
+    async def get_all(
+        self,
+        *,
+        limit: int,
+        offset: int,
+    ) -> tuple[Sequence[Team], int]:
+        count_stmt = select(func.count().select_from(Team))
+
+        total = await self.session.scalar(count_stmt)
+
+        stmt = select(Team).order_by(Team.created_at.desc()).limit(limit).offset(offset)
+
+        result = await self.session.scalars(stmt)
+
+        return result.all(), total or 0
+
+    async def update(self, team_id: UUID, values: TeamUpdateData) -> Team | None:
+        if not values:
             return await self.get_by_id(team_id)
 
-        stmt = update(Team).where(Team.id == team_id).values(**team_data).returning(Team)
+        stmt = update(Team).where(Team.id == team_id).values(**values).returning(Team)
 
         result = await self.session.execute(stmt)
 

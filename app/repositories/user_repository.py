@@ -1,6 +1,7 @@
+from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db.models.user import User
@@ -8,6 +9,10 @@ from ..types.user import UserUpdateData
 
 
 class UserRepository:
+    """
+    Repository for user persistence operations.
+    """
+
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
@@ -18,17 +23,26 @@ class UserRepository:
 
         return user
 
-    async def get_all(self) -> list[User]:
-        stmt = select(User)
-
-        result = await self.session.scalars(stmt)
-
-        return list(result)
-
     async def get_by_id(self, user_id: UUID) -> User | None:
         stmt = select(User).where(User.id == user_id)
 
         return await self.session.scalar(stmt)
+
+    async def get_all(
+        self,
+        *,
+        limit: int,
+        offset: int,
+    ) -> tuple[Sequence[User], int]:
+        count_stmt = select(func.count().select_from(User))
+
+        total = await self.session.scalar(count_stmt)
+
+        stmt = select(User).order_by(User.created_at.desc()).limit(limit).offset(offset)
+
+        result = await self.session.scalars(stmt)
+
+        return result.all(), total or 0
 
     async def update(
         self,
