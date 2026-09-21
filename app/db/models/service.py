@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, ForeignKey, String, text
+from sqlalchemy import DateTime, ForeignKey, Index, String, text
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -14,7 +14,13 @@ if TYPE_CHECKING:
 
 
 class Service(Base):
+    """
+    Database model representing a service owned by a team.
+    """
+
     __tablename__ = "services"
+
+    __table_args__ = (Index("ix_services_name", "name", unique=True),)
 
     id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
@@ -25,8 +31,6 @@ class Service(Base):
     name: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
-        unique=True,
-        index=True,
     )
 
     description: Mapped[str | None] = mapped_column(

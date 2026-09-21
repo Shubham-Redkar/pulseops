@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, String, text
+from sqlalchemy import DateTime, Index, String, text
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -14,16 +14,34 @@ if TYPE_CHECKING:
 
 
 class Team(Base):
+    """
+    Database model representing a team that owns services and users.
+    """
+
     __tablename__ = "teams"
 
-    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    __table_args__ = (Index("ix_teams_name", "name", unique=True),)
 
-    name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
+    id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+    )
 
-    description: Mapped[str] = mapped_column(String(2000), nullable=True)
+    name: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+    )
+
+    description: Mapped[str | None] = mapped_column(
+        String(2000),
+        nullable=True,
+    )
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=text("CURRENT_TIMESTAMP"),
     )
 
     updated_at: Mapped[datetime] = mapped_column(
@@ -33,7 +51,10 @@ class Team(Base):
         onupdate=lambda: datetime.now(UTC),
     )
 
-    users: Mapped[list["User"]] = relationship(back_populates="team")
+    users: Mapped[list["User"]] = relationship(
+        back_populates="team",
+    )
+
     services: Mapped[list["Service"]] = relationship(
         back_populates="team",
     )

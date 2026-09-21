@@ -3,7 +3,7 @@ from enum import Enum
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, ForeignKey, String, text
+from sqlalchemy import DateTime, ForeignKey, Index, String, text
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -21,27 +21,59 @@ def enum_values(enum_class: type[Enum]) -> list[str]:
 
 
 class User(Base):
+    """
+    Database model representing a user belonging to a team.
+    """
+
     __tablename__ = "users"
 
-    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    __table_args__ = (
+        Index("ix_users_username", "username", unique=True),
+        Index("ix_users_email", "email", unique=True),
+    )
 
-    username: Mapped[str] = mapped_column(String(50), nullable=False, unique=True, index=True)
+    id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+    )
 
-    email: Mapped[str] = mapped_column(String(254), nullable=False, unique=True, index=True)
+    username: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+    )
 
-    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    email: Mapped[str] = mapped_column(
+        String(254),
+        nullable=False,
+    )
+
+    password_hash: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+    )
 
     role: Mapped[UserRole] = mapped_column(
-        ENUM(UserRole, name="user_role_enum", create_type=False, values_callable=enum_values),
+        ENUM(
+            UserRole,
+            name="user_role_enum",
+            create_type=False,
+            values_callable=enum_values,
+        ),
         nullable=False,
     )
 
     team_id: Mapped[UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("teams.id", ondelete="SET NULL"), nullable=True, index=True
+        PGUUID(as_uuid=True),
+        ForeignKey("teams.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=text("CURRENT_TIMESTAMP"),
     )
 
     updated_at: Mapped[datetime] = mapped_column(
