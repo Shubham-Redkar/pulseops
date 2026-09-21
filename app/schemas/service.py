@@ -2,7 +2,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from .base import CleanString, IDMixin, ORMBaseSchema, TimeStampMixin
+from .base import CleanString, IDMixin, ORMBaseSchema, TimestampMixin
 
 
 class ServiceBase(BaseModel):
@@ -89,7 +89,7 @@ class UpdateServiceRequest(BaseModel):
 class ServiceResponse(
     ORMBaseSchema,
     IDMixin,
-    TimeStampMixin,
+    TimestampMixin,
     ServiceBase,
 ):
     """

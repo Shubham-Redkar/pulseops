@@ -2,7 +2,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from .base import CleanString, IDMixin, ORMBaseSchema, TimeStampMixin
+from .base import CleanString, IDMixin, ORMBaseSchema, TimestampMixin
 from .enums import Environment, IncidentSeverity
 
 
@@ -117,7 +117,7 @@ class UpdateIncidentRequest(BaseModel):
 class IncidentResponse(
     ORMBaseSchema,
     IDMixin,
-    TimeStampMixin,
+    TimestampMixin,
     IncidentBase,
 ):
     """

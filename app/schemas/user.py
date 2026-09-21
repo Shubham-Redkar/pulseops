@@ -2,7 +2,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-from .base import CleanString, IDMixin, ORMBaseSchema, TimeStampMixin
+from .base import CleanString, IDMixin, ORMBaseSchema, TimestampMixin
 from .enums import UserRole
 
 
@@ -111,7 +111,7 @@ class UpdateUserRequest(BaseModel):
 class UserResponse(
     ORMBaseSchema,
     IDMixin,
-    TimeStampMixin,
+    TimestampMixin,
     UserBase,
 ):
     """
