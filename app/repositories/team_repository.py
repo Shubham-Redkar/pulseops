@@ -34,7 +34,7 @@ class TeamRepository:
         limit: int,
         offset: int,
     ) -> tuple[Sequence[Team], int]:
-        count_stmt = select(func.count().select_from(Team))
+        count_stmt = select(func.count()).select_from(Team)
 
         total = await self.session.scalar(count_stmt)
 

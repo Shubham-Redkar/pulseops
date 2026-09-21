@@ -34,7 +34,7 @@ class UserRepository:
         limit: int,
         offset: int,
     ) -> tuple[Sequence[User], int]:
-        count_stmt = select(func.count().select_from(User))
+        count_stmt = select(func.count()).select_from(User)
 
         total = await self.session.scalar(count_stmt)
 
