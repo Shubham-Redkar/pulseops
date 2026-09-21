@@ -22,6 +22,9 @@ SessionDep = Annotated[
 def get_team_service(
     session: SessionDep,
 ) -> TeamService:
+    """
+    Provide a team service with its database dependencies.
+    """
     return TeamService(
         session=session,
         repository=TeamRepository(session),
@@ -37,6 +40,9 @@ TeamServiceDep = Annotated[
 def get_service_manager(
     session: SessionDep,
 ) -> ServiceManager:
+    """
+    Provide a service manager with its database dependencies.
+    """
     return ServiceManager(
         session=session,
         repository=ServiceRepository(session),
@@ -52,6 +58,9 @@ ServiceManagerDep = Annotated[
 def get_user_service(
     session: SessionDep,
 ) -> UserService:
+    """
+    Provide a user service with its database dependencies.
+    """
     return UserService(
         session=session,
         repository=UserRepository(session),
@@ -67,6 +76,9 @@ UserServiceDep = Annotated[
 def get_incident_service(
     session: SessionDep,
 ) -> IncidentService:
+    """
+    Provide a incident service with its database dependencies.
+    """
     return IncidentService(
         session=session,
         repository=IncidentRepository(session),

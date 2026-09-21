@@ -1,16 +1,21 @@
 from typing import cast
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import UserNotFoundError
-from app.db.models.user import User
-from app.repositories.user_repository import UserRepository
-from app.schemas.user import CreateUserRequest, UpdateUserRequest, UserResponse
-from app.types.user import UserUpdateData
+from ..core.exceptions import UserNotFoundError
+from ..db.models.user import User
+from ..repositories.user_repository import UserRepository
+from ..schemas.base import PaginatedResponse
+from ..schemas.user import CreateUserRequest, UpdateUserRequest, UserResponse
+from ..types.user import UserUpdateData
 
 
 class UserService:
+    """
+    Manage user business operations.
+    """
+
     def __init__(
         self,
         session: AsyncSession,
@@ -25,7 +30,6 @@ class UserService:
     ) -> UserResponse:
 
         user = User(
-            id=uuid4(),
             **user_data.model_dump(),
         )
 
@@ -34,16 +38,28 @@ class UserService:
 
         return UserResponse.model_validate(user)
 
-    async def get_users(self) -> list[UserResponse]:
-        users = await self.repository.get_all()
-
-        return [UserResponse.model_validate(user) for user in users]
-
     async def get_user(self, user_id: UUID) -> UserResponse:
         if (user := await self.repository.get_by_id(user_id)) is None:
             raise UserNotFoundError(user_id)
 
         return UserResponse.model_validate(user)
+
+    async def get_users(
+        self,
+        limit: int,
+        offset: int,
+    ) -> PaginatedResponse[UserResponse]:
+        users, total = await self.repository.get_all(
+            limit=limit,
+            offset=offset,
+        )
+
+        return PaginatedResponse(
+            items=[UserResponse.model_validate(user) for user in users],
+            limit=limit,
+            offset=offset,
+            total=total,
+        )
 
     async def update_user(
         self,

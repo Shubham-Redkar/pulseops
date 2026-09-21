@@ -1,26 +1,27 @@
 from typing import cast
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.schemas.team import CreateTeamRequest, TeamResponse, UpdateTeamRequest
 
 from ..core.exceptions import TeamNotFoundError
 from ..db.models.team import Team
 from ..repositories.team_repository import TeamRepository
+from ..schemas.base import PaginatedResponse
+from ..schemas.team import CreateTeamRequest, TeamResponse, UpdateTeamRequest
 from ..types.team import TeamUpdateData
-
-teams: dict[UUID, TeamResponse] = {}
 
 
 class TeamService:
+    """
+    Manage team business operations.
+    """
+
     def __init__(self, session: AsyncSession, repository: TeamRepository) -> None:
         self.session = session
         self.repository = repository
 
     async def create_team(self, team_data: CreateTeamRequest) -> TeamResponse:
         team = Team(
-            id=uuid4(),
             **team_data.model_dump(),
         )
 
@@ -29,13 +30,20 @@ class TeamService:
 
         return TeamResponse.model_validate(team)
 
-    async def get_teams(self) -> list[TeamResponse]:
-        teams = await self.repository.get_all()
+    async def get_teams(self, *, limit: int, offset: int) -> PaginatedResponse[TeamResponse]:
+        teams, total = await self.repository.get_all(limit=limit, offset=offset)
 
-        return [TeamResponse.model_validate(team) for team in teams]
+        return PaginatedResponse[TeamResponse](
+            items=[TeamResponse.model_validate(team) for team in teams],
+            limit=limit,
+            offset=offset,
+            total=total,
+        )
 
     async def get_team(self, team_id: UUID) -> TeamResponse:
-        if (team := await self.repository.get_by_id(team_id)) is None:
+        team = await self.repository.get_by_id(team_id)
+
+        if team is None:
             raise TeamNotFoundError(team_id)
 
         return TeamResponse.model_validate(team)

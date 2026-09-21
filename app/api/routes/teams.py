@@ -1,8 +1,9 @@
 from uuid import UUID
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Query, status
 
 from ...api.dependencies import TeamServiceDep
+from ...schemas.base import PaginatedResponse
 from ...schemas.team import (
     CreateTeamRequest,
     TeamResponse,
@@ -28,16 +29,6 @@ async def create_team(
 
 
 @router.get(
-    "",
-    response_model=list[TeamResponse],
-)
-async def get_teams(
-    team_service: TeamServiceDep,
-) -> list[TeamResponse]:
-    return await team_service.get_teams()
-
-
-@router.get(
     "/{team_id}",
     response_model=TeamResponse,
 )
@@ -46,6 +37,30 @@ async def get_team(
     team_service: TeamServiceDep,
 ) -> TeamResponse:
     return await team_service.get_team(team_id)
+
+
+@router.get(
+    "",
+    response_model=PaginatedResponse[TeamResponse],
+)
+async def get_teams(
+    team_service: TeamServiceDep,
+    limit: int = Query(
+        default=20,
+        ge=1,
+        le=100,
+        description="Maximum number of teams to return.",
+    ),
+    offset: int = Query(
+        default=0,
+        ge=0,
+        description="Number of teams to skip.",
+    ),
+) -> PaginatedResponse[TeamResponse]:
+    return await team_service.get_teams(
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.patch(
