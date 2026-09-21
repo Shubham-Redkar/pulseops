@@ -34,7 +34,7 @@ class IncidentRepository:
         limit: int,
         offset: int,
     ) -> tuple[Sequence[Incident], int]:
-        count_stmt = select(func.count().select_from(Incident))
+        count_stmt = select(func.count()).select_from(Incident)
 
         total = await self.session.scalar(count_stmt)
 
