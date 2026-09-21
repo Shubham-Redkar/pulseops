@@ -1,11 +1,12 @@
 from typing import cast
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.exceptions import IncidentNotFoundError
 from ..db.models.incident import Incident
 from ..repositories.incident_repository import IncidentRepository
+from ..schemas.base import PaginatedResponse
 from ..schemas.incident import (
     CreateIncidentRequest,
     IncidentResponse,
@@ -15,6 +16,10 @@ from ..types.incident import IncidentUpdateData
 
 
 class IncidentService:
+    """
+    Manage incident business operations.
+    """
+
     def __init__(
         self,
         session: AsyncSession,
@@ -28,7 +33,6 @@ class IncidentService:
         incident_data: CreateIncidentRequest,
     ) -> IncidentResponse:
         incident = Incident(
-            id=uuid4(),
             **incident_data.model_dump(),
         )
 
@@ -36,11 +40,6 @@ class IncidentService:
             incident = await self.repository.create(incident)
 
         return IncidentResponse.model_validate(incident)
-
-    async def get_incidents(self) -> list[IncidentResponse]:
-        incidents = await self.repository.get_all()
-
-        return [IncidentResponse.model_validate(incident) for incident in incidents]
 
     async def get_incident(
         self,
@@ -50,6 +49,23 @@ class IncidentService:
             raise IncidentNotFoundError(incident_id)
 
         return IncidentResponse.model_validate(incident)
+
+    async def get_incidents(
+        self,
+        limit: int,
+        offset: int,
+    ) -> PaginatedResponse[IncidentResponse]:
+        incidents, total = await self.repository.get_all(
+            limit=limit,
+            offset=offset,
+        )
+
+        return PaginatedResponse(
+            items=[IncidentResponse.model_validate(incident) for incident in incidents],
+            limit=limit,
+            offset=offset,
+            total=total,
+        )
 
     async def update_incident(
         self,
