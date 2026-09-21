@@ -1,6 +1,7 @@
+from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db.models.incident import Incident
@@ -8,6 +9,10 @@ from ..types.incident import IncidentUpdateData
 
 
 class IncidentRepository:
+    """
+    Repository for incident persistence operations.
+    """
+
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
@@ -18,17 +23,26 @@ class IncidentRepository:
 
         return incident
 
-    async def get_all(self) -> list[Incident]:
-        stmt = select(Incident)
-
-        result = await self.session.scalars(stmt)
-
-        return list(result.all())
-
     async def get_by_id(self, incident_id: UUID) -> Incident | None:
         stmt = select(Incident).where(Incident.id == incident_id)
 
         return await self.session.scalar(stmt)
+
+    async def get_all(
+        self,
+        *,
+        limit: int,
+        offset: int,
+    ) -> tuple[Sequence[Incident], int]:
+        count_stmt = select(func.count().select_from(Incident))
+
+        total = await self.session.scalar(count_stmt)
+
+        stmt = select(Incident).order_by(Incident.created_at.desc()).limit(limit).offset(offset)
+
+        result = await self.session.scalars(stmt)
+
+        return result.all(), total or 0
 
     async def update(self, incident_id: UUID, incident_data: IncidentUpdateData) -> Incident | None:
         if not incident_data:
