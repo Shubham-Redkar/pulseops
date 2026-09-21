@@ -1,7 +1,8 @@
 from uuid import UUID
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Query, status
 
+from ...schemas.base import PaginatedResponse
 from ...schemas.user import (
     CreateUserRequest,
     UpdateUserRequest,
@@ -28,16 +29,6 @@ async def create_user(
 
 
 @router.get(
-    "",
-    response_model=list[UserResponse],
-)
-async def get_users(
-    user_service: UserServiceDep,
-) -> list[UserResponse]:
-    return await user_service.get_users()
-
-
-@router.get(
     "/{user_id}",
     response_model=UserResponse,
 )
@@ -46,6 +37,30 @@ async def get_user(
     user_service: UserServiceDep,
 ) -> UserResponse:
     return await user_service.get_user(user_id)
+
+
+@router.get(
+    "",
+    response_model=PaginatedResponse[UserResponse],
+)
+async def get_users(
+    user_service: UserServiceDep,
+    limit: int = Query(
+        default=20,
+        ge=1,
+        le=100,
+        description="Maximum number of users to return.",
+    ),
+    offset: int = Query(
+        default=0,
+        ge=0,
+        description="Number of users to skip.",
+    ),
+) -> PaginatedResponse[UserResponse]:
+    return await user_service.get_users(
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.patch(

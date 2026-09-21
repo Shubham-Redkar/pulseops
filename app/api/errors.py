@@ -13,6 +13,7 @@ def create_error_response(
     message: str,
     request: Request,
 ) -> JSONResponse:
+    """Create a standardized JSON error response."""
     request_id = request.state.request_id
 
     error = ErrorResponse(
@@ -31,6 +32,7 @@ async def not_found_handler(
     request: Request,
     exc: Exception,
 ) -> JSONResponse:
+    """Handle resource-not-found exceptions."""
     app_exc = exc if isinstance(exc, AppException) else None
 
     return create_error_response(
@@ -45,6 +47,7 @@ async def conflict_handler(
     request: Request,
     exc: Exception,
 ) -> JSONResponse:
+    """Handle resource-conflict exceptions."""
     app_exc = exc if isinstance(exc, AppException) else None
 
     return create_error_response(
@@ -59,6 +62,7 @@ async def app_exception_handler(
     request: Request,
     exc: Exception,
 ) -> JSONResponse:
+    """Handle unexpected application exceptions."""
     return create_error_response(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         code=ErrorCode.INTERNAL_ERROR,
