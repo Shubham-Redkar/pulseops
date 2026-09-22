@@ -1,9 +1,10 @@
 from typing import cast
 from uuid import UUID
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..core.exceptions import TeamNotFoundError
+from ..core.exceptions import ConflictError, TeamNotFoundError
 from ..db.models.team import Team
 from ..repositories.team_repository import TeamRepository
 from ..schemas.base import PaginatedResponse
@@ -25,8 +26,14 @@ class TeamService:
             **team_data.model_dump(),
         )
 
-        async with self.session.begin():
-            team = await self.repository.create(team)
+        try:
+            async with self.session.begin():
+                team = await self.repository.create(team)
+        except IntegrityError as exc:
+            if "ix_teams_name" in str(exc.orig):
+                raise ConflictError("A team with this name already exists.") from exc
+
+            raise
 
         return TeamResponse.model_validate(team)
 

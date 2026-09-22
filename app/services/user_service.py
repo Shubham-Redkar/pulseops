@@ -1,9 +1,11 @@
 from typing import cast
 from uuid import UUID
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..core.exceptions import UserNotFoundError
+from ..core.exceptions import ConflictError, UserNotFoundError
+from ..core.security import password_hash
 from ..db.models.user import User
 from ..repositories.user_repository import UserRepository
 from ..schemas.base import PaginatedResponse
@@ -30,11 +32,26 @@ class UserService:
     ) -> UserResponse:
 
         user = User(
-            **user_data.model_dump(),
+            username=user_data.username,
+            email=user_data.email,
+            password_hash=password_hash.hash(user_data.password),
+            role=user_data.role,
+            team_id=user_data.team_id,
         )
 
-        async with self.session.begin():
-            user = await self.repository.create(user)
+        try:
+            async with self.session.begin():
+                user = await self.repository.create(user)
+        except IntegrityError as exc:
+            error = str(exc.orig)
+
+            if "ix_users_username" in error:
+                raise ConflictError("A user with this username already exists.") from exc
+
+            if "ix_users_email" in error:
+                raise ConflictError("A user with this email already exists.") from exc
+
+            raise
 
         return UserResponse.model_validate(user)
 

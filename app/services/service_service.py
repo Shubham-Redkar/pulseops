@@ -1,9 +1,10 @@
 from typing import cast
 from uuid import UUID
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..core.exceptions import ServiceNotFoundError
+from ..core.exceptions import ConflictError, ServiceNotFoundError
 from ..db.models.service import Service
 from ..repositories.service_repository import ServiceRepository
 from ..schemas.base import PaginatedResponse
@@ -23,8 +24,14 @@ class ServiceManager:
     async def create_service(self, service_data: CreateServiceRequest) -> ServiceResponse:
         service = Service(**service_data.model_dump())
 
-        async with self.session.begin():
-            service = await self.repository.create(service)
+        try:
+            async with self.session.begin():
+                service = await self.repository.create(service)
+        except IntegrityError as exc:
+            if "ix_services_name" in str(exc.orig):
+                raise ConflictError("A service with this name already exists.") from exc
+
+            raise
 
         return ServiceResponse.model_validate(service)
 

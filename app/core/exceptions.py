@@ -22,6 +22,9 @@ class ConflictError(AppException):
     Raised when an operation conflicts with existing state.
     """
 
+    def __init__(self, detail: str):
+        self.detail = detail
+
 
 class UserNotFoundError(NotFoundError):
     """
