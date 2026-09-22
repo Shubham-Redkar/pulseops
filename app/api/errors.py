@@ -53,7 +53,7 @@ async def conflict_handler(
     return create_error_response(
         status_code=status.HTTP_409_CONFLICT,
         code=ErrorCode.CONFLICT,
-        message=app_exc.message if app_exc else "The request conflicts with existing state.",
+        message=str(app_exc) if app_exc else "The request conflicts with existing state.",
         request=request,
     )
 
