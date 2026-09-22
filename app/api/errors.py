@@ -1,8 +1,8 @@
-from fastapi import Request, status
+from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
 from ..core.errors import ErrorCode
-from ..core.exceptions import AppException
+from ..core.exceptions import AppException, ConflictError, NotFoundError
 from ..schemas.errors import ErrorResponse
 
 
@@ -68,4 +68,35 @@ async def app_exception_handler(
         code=ErrorCode.INTERNAL_ERROR,
         message="An unexpected application error occurred.",
         request=request,
+    )
+
+
+async def service_unavailable_handler(
+    request: Request,
+    exc: Exception,
+) -> JSONResponse:
+    return create_error_response(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        code=ErrorCode.SERVICE_UNAVAILABLE,
+        message=str(exc),
+        request=request,
+    )
+
+
+def register_exception_handlers(app: FastAPI) -> None:
+    """Register application exception handlers."""
+
+    app.add_exception_handler(
+        ConflictError,
+        conflict_handler,
+    )
+
+    app.add_exception_handler(
+        NotFoundError,
+        not_found_handler,
+    )
+
+    app.add_exception_handler(
+        AppException,
+        app_exception_handler,
     )

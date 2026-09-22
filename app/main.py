@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 
-from .api.errors import app_exception_handler, conflict_handler, not_found_handler
+from .api.errors import register_exception_handlers
 from .api.routes.router import api_router
-from .core.exceptions import AppException, ConflictError, NotFoundError
+from .db.dependencies import check_database
 from .middleware.request_id import RequestIDMiddleware
 
 app = FastAPI(
@@ -13,14 +13,7 @@ app = FastAPI(
 
 app.add_middleware(RequestIDMiddleware)
 
-app.add_exception_handler(
-    ConflictError,
-    conflict_handler,
-)
-
-app.add_exception_handler(NotFoundError, not_found_handler)
-
-app.add_exception_handler(AppException, app_exception_handler)
+register_exception_handlers(app)
 
 
 @app.get("/", tags=["Root"])
@@ -44,8 +37,7 @@ async def liveness() -> dict[str, str]:
 
 @app.get("/health/ready", tags=["Health"])
 async def readiness() -> dict[str, str]:
-    # check PostgreSQL
-    # check Redis
+    await check_database()
 
     return {"status": "ready"}
 

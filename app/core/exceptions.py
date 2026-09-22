@@ -26,6 +26,15 @@ class ConflictError(AppException):
         self.detail = detail
 
 
+class ServiceUnavailableError(AppException):
+    """
+    Raised when a required dependency is unavailable.
+    """
+
+    def __init__(self, detail: str):
+        self.detail = detail
+
+
 class UserNotFoundError(NotFoundError):
     """
     Raised when a user does not exist.
