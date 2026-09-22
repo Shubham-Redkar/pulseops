@@ -1,206 +1,487 @@
-from collections.abc import Generator
-from uuid import uuid4
+from datetime import UTC, datetime
+from unittest.mock import MagicMock
+from uuid import UUID, uuid4
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
-from app.core.exceptions import UserNotFoundError
+from app.core.exceptions import ConflictError, UserNotFoundError
+from app.db.models.user import User
 from app.schemas.enums import UserRole
 from app.schemas.user import CreateUserRequest, UpdateUserRequest
-from app.services.user_service import UserService, users
+from app.services.user_service import UserService
 
 
-@pytest.fixture
-def user_service() -> Generator[UserService]:
-    users.clear()
+def create_user_model(
+    username: str = "john",
+    email: str = "john@example.com",
+    role: UserRole = UserRole.ANALYST,
+    team_id: UUID | None = None,
+) -> User:
+    now = datetime.now(UTC)
 
-    service = UserService()
-
-    yield service
-
-    users.clear()
+    return User(
+        id=uuid4(),
+        username=username,
+        email=email,
+        password_hash="hashed-password",
+        role=role,
+        team_id=team_id,
+        created_at=now,
+        updated_at=now,
+    )
 
 
 @pytest.mark.asyncio
-async def test_create_user(user_service: UserService):
-    user_data = CreateUserRequest(
+async def test_create_user(
+    mock_session: MagicMock,
+    mock_user_repository: MagicMock,
+) -> None:
+    team_id = uuid4()
+
+    user = create_user_model(
         username="john",
         email="john@example.com",
-        password="john123",
-        role=UserRole.ADMIN,
+        role=UserRole.ANALYST,
+        team_id=team_id,
     )
 
-    result = await user_service.create_user(user_data)
+    mock_user_repository.create.return_value = user
 
-    assert result.id is not None
+    service = UserService(
+        session=mock_session,
+        repository=mock_user_repository,
+    )
+
+    result = await service.create_user(
+        CreateUserRequest(
+            username="john",
+            email="john@example.com",
+            password="SecurePassword456!",
+            role=UserRole.ANALYST,
+            team_id=team_id,
+        )
+    )
+
+    assert result.id == user.id
     assert result.username == "john"
     assert result.email == "john@example.com"
-    assert result.role == "admin"
-    assert result.created_at is not None
-    assert result.updated_at is not None
-    assert result.created_at == result.updated_at
-    assert result.id in users
-    assert users[result.id] == result
+    assert result.role == UserRole.ANALYST
+    assert result.team_id == team_id
+    assert result.created_at == user.created_at
+    assert result.updated_at == user.updated_at
+
+    mock_user_repository.create.assert_awaited_once()
+
+    created_user = mock_user_repository.create.call_args.args[0]
+
+    assert created_user.username == "john"
+    assert created_user.email == "john@example.com"
+    assert created_user.role == UserRole.ANALYST
+    assert created_user.team_id == team_id
+    assert created_user.password_hash != "SecurePassword456!"
 
 
 @pytest.mark.asyncio
-async def test_get_users_empty(user_service: UserService):
-    result = await user_service.get_users()
+async def test_create_user_duplicate_username(
+    mock_session: MagicMock,
+    mock_user_repository: MagicMock,
+) -> None:
+    original_error = Exception('duplicate key value violates unique constraint "ix_users_username"')
 
-    assert result == []
-
-
-@pytest.mark.asyncio
-async def test_get_users(user_service: UserService):
-    first_user = await user_service.create_user(
-        CreateUserRequest(
-            username="john",
-            email="john@example.com",
-            password="john123",
-            role=UserRole.ADMIN,
-        )
+    mock_user_repository.create.side_effect = IntegrityError(
+        statement="INSERT INTO users",
+        params={},
+        orig=original_error,
     )
 
-    second_user = await user_service.create_user(
-        CreateUserRequest(
-            username="jane", email="jane@example.com", password="jane123", role=UserRole.VIEWER
-        )
+    service = UserService(
+        session=mock_session,
+        repository=mock_user_repository,
     )
 
-    result = await user_service.get_users()
+    with pytest.raises(
+        ConflictError,
+        match="A user with this username already exists.",
+    ):
+        await service.create_user(
+            CreateUserRequest(
+                username="john",
+                email="john@example.com",
+                password="SecurePassword456!",
+                role=UserRole.ANALYST,
+            )
+        )
 
-    assert len(result) == 2
-    assert first_user in result
-    assert second_user in result
+    mock_user_repository.create.assert_awaited_once()
 
 
 @pytest.mark.asyncio
-async def test_get_user(user_service: UserService):
-    created_user = await user_service.create_user(
-        CreateUserRequest(
-            username="john",
-            email="john@example.com",
-            password="john123",
-            role=UserRole.ADMIN,
-        )
+async def test_create_user_duplicate_email(
+    mock_session: MagicMock,
+    mock_user_repository: MagicMock,
+) -> None:
+    original_error = Exception('duplicate key value violates unique constraint "ix_users_email"')
+
+    mock_user_repository.create.side_effect = IntegrityError(
+        statement="INSERT INTO users",
+        params={},
+        orig=original_error,
     )
 
-    result = await user_service.get_user(created_user.id)
+    service = UserService(
+        session=mock_session,
+        repository=mock_user_repository,
+    )
 
-    assert result == created_user
-    assert result.id == created_user.id
+    with pytest.raises(
+        ConflictError,
+        match="A user with this email already exists.",
+    ):
+        await service.create_user(
+            CreateUserRequest(
+                username="john",
+                email="john@example.com",
+                password="SecurePassword456!",
+                role=UserRole.ANALYST,
+            )
+        )
+
+    mock_user_repository.create.assert_awaited_once()
 
 
 @pytest.mark.asyncio
-async def test_get_user_not_found(user_service: UserService):
+async def test_get_user(
+    mock_session: MagicMock,
+    mock_user_repository: MagicMock,
+) -> None:
+    user = create_user_model()
+
+    mock_user_repository.get_by_id.return_value = user
+
+    service = UserService(
+        session=mock_session,
+        repository=mock_user_repository,
+    )
+
+    result = await service.get_user(user.id)
+
+    assert result.id == user.id
+    assert result.username == user.username
+    assert result.email == user.email
+    assert result.role == user.role
+    assert result.team_id == user.team_id
+    assert result.created_at == user.created_at
+    assert result.updated_at == user.updated_at
+
+    mock_user_repository.get_by_id.assert_awaited_once_with(user.id)
+
+
+@pytest.mark.asyncio
+async def test_get_user_not_found(
+    mock_session: MagicMock,
+    mock_user_repository: MagicMock,
+) -> None:
     user_id = uuid4()
+
+    mock_user_repository.get_by_id.return_value = None
+
+    service = UserService(
+        session=mock_session,
+        repository=mock_user_repository,
+    )
 
     with pytest.raises(
         UserNotFoundError,
-        match=f"User with ID '{user_id}' not found",
+        match=f"User with ID '{user_id}' was not found.",
     ):
-        await user_service.get_user(user_id)
+        await service.get_user(user_id)
+
+    mock_user_repository.get_by_id.assert_awaited_once_with(user_id)
 
 
 @pytest.mark.asyncio
-async def test_update_user(user_service: UserService):
-    created_user = await user_service.create_user(
-        CreateUserRequest(
-            username="john",
-            email="john@example.com",
-            password="john123",
-            role=UserRole.ADMIN,
-        )
+async def test_get_users(
+    mock_session: MagicMock,
+    mock_user_repository: MagicMock,
+) -> None:
+    first_user = create_user_model(
+        username="john",
+        email="john@example.com",
     )
 
-    original_created_at = created_user.created_at
+    second_user = create_user_model(
+        username="jane",
+        email="jane@example.com",
+    )
 
-    updated_user = await user_service.update_user(
-        created_user.id,
+    mock_user_repository.get_all.return_value = (
+        [first_user, second_user],
+        2,
+    )
+
+    service = UserService(
+        session=mock_session,
+        repository=mock_user_repository,
+    )
+
+    result = await service.get_users(
+        limit=20,
+        offset=0,
+    )
+
+    assert result.items
+    assert len(result.items) == 2
+    assert result.total == 2
+    assert result.limit == 20
+    assert result.offset == 0
+
+    assert result.items[0].id == first_user.id
+    assert result.items[0].username == "john"
+
+    assert result.items[1].id == second_user.id
+    assert result.items[1].username == "jane"
+
+    mock_user_repository.get_all.assert_awaited_once_with(
+        limit=20,
+        offset=0,
+    )
+
+
+@pytest.mark.asyncio
+async def test_get_users_empty(
+    mock_session: MagicMock,
+    mock_user_repository: MagicMock,
+) -> None:
+    mock_user_repository.get_all.return_value = (
+        [],
+        0,
+    )
+
+    service = UserService(
+        session=mock_session,
+        repository=mock_user_repository,
+    )
+
+    result = await service.get_users(
+        limit=20,
+        offset=0,
+    )
+
+    assert result.items == []
+    assert result.total == 0
+    assert result.limit == 20
+    assert result.offset == 0
+
+    mock_user_repository.get_all.assert_awaited_once_with(
+        limit=20,
+        offset=0,
+    )
+
+
+@pytest.mark.asyncio
+async def test_update_user(
+    mock_session: MagicMock,
+    mock_user_repository: MagicMock,
+) -> None:
+    user = create_user_model()
+
+    updated_user = User(
+        id=user.id,
+        username="updated_john",
+        email="updated@example.com",
+        password_hash=user.password_hash,
+        role=UserRole.ADMIN,
+        team_id=user.team_id,
+        created_at=user.created_at,
+        updated_at=datetime.now(UTC),
+    )
+
+    mock_user_repository.update.return_value = updated_user
+
+    service = UserService(
+        session=mock_session,
+        repository=mock_user_repository,
+    )
+
+    result = await service.update_user(
+        user.id,
         UpdateUserRequest(
-            username="john-updated", email="john.updated@example.com", role=UserRole.VIEWER
+            username="updated_john",
+            email="updated@example.com",
+            role=UserRole.ADMIN,
         ),
     )
 
-    assert updated_user.id == created_user.id
-    assert updated_user.username == "john-updated"
-    assert updated_user.email == "john.updated@example.com"
-    assert updated_user.role == "viewer"
-    assert updated_user.created_at == original_created_at
-    assert updated_user.updated_at is not None
+    assert result.id == user.id
+    assert result.username == "updated_john"
+    assert result.email == "updated@example.com"
+    assert result.role == UserRole.ADMIN
+    assert result.team_id == user.team_id
+    assert result.created_at == user.created_at
+    assert result.updated_at == updated_user.updated_at
+
+    mock_user_repository.update.assert_awaited_once_with(
+        user.id,
+        {
+            "username": "updated_john",
+            "email": "updated@example.com",
+            "role": UserRole.ADMIN,
+        },
+    )
 
 
 @pytest.mark.asyncio
-async def test_update_user_only_updates_provided_fields(
-    user_service: UserService,
-):
-    created_user = await user_service.create_user(
-        CreateUserRequest(
-            username="john",
-            email="john@example.com",
-            password="john123",
-            role=UserRole.ADMIN,
-        )
+async def test_update_user_only_provided_fields(
+    mock_session: MagicMock,
+    mock_user_repository: MagicMock,
+) -> None:
+    user = create_user_model()
+
+    updated_user = User(
+        id=user.id,
+        username="updated_john",
+        email=user.email,
+        password_hash=user.password_hash,
+        role=user.role,
+        team_id=user.team_id,
+        created_at=user.created_at,
+        updated_at=datetime.now(UTC),
     )
 
-    original_email = created_user.email
-    original_role = created_user.role
-    original_created_at = created_user.created_at
+    mock_user_repository.update.return_value = updated_user
 
-    updated_user = await user_service.update_user(
-        created_user.id,
+    service = UserService(
+        session=mock_session,
+        repository=mock_user_repository,
+    )
+
+    result = await service.update_user(
+        user.id,
         UpdateUserRequest(
-            username="john-updated",
+            username="updated_john",
         ),
     )
 
-    assert updated_user.username == "john-updated"
-    assert updated_user.email == original_email
-    assert updated_user.role == original_role
-    assert updated_user.created_at == original_created_at
-    assert updated_user.updated_at is not None
+    assert result.id == user.id
+    assert result.username == "updated_john"
+    assert result.email == user.email
+    assert result.role == user.role
+
+    mock_user_repository.update.assert_awaited_once_with(
+        user.id,
+        {
+            "username": "updated_john",
+        },
+    )
 
 
 @pytest.mark.asyncio
-async def test_update_user_not_found(user_service: UserService):
+async def test_update_user_not_found(
+    mock_session: MagicMock,
+    mock_user_repository: MagicMock,
+) -> None:
     user_id = uuid4()
+
+    mock_user_repository.update.return_value = None
+
+    service = UserService(
+        session=mock_session,
+        repository=mock_user_repository,
+    )
 
     with pytest.raises(
         UserNotFoundError,
-        match=f"User with ID '{user_id}' not found",
+        match=f"User with ID '{user_id}' was not found.",
     ):
-        await user_service.update_user(
+        await service.update_user(
             user_id,
             UpdateUserRequest(
-                username="john-updated",
+                username="updated_john",
             ),
         )
 
-
-@pytest.mark.asyncio
-async def test_delete_user(user_service: UserService):
-    created_user = await user_service.create_user(
-        CreateUserRequest(
-            username="john",
-            email="john@example.com",
-            password="john123",
-            role=UserRole.ADMIN,
-        )
+    mock_user_repository.update.assert_awaited_once_with(
+        user_id,
+        {
+            "username": "updated_john",
+        },
     )
 
-    assert created_user.id in users
 
-    result = await user_service.delete_user(created_user.id)
+@pytest.mark.asyncio
+async def test_delete_user(
+    mock_session: MagicMock,
+    mock_user_repository: MagicMock,
+) -> None:
+    user_id = uuid4()
+
+    mock_user_repository.delete.return_value = True
+
+    service = UserService(
+        session=mock_session,
+        repository=mock_user_repository,
+    )
+
+    result = await service.delete_user(user_id)
 
     assert result is None
-    assert created_user.id not in users
+
+    mock_user_repository.delete.assert_awaited_once_with(user_id)
 
 
 @pytest.mark.asyncio
-async def test_delete_user_not_found(user_service: UserService):
+async def test_delete_user_not_found(
+    mock_session: MagicMock,
+    mock_user_repository: MagicMock,
+) -> None:
     user_id = uuid4()
+
+    mock_user_repository.delete.return_value = False
+
+    service = UserService(
+        session=mock_session,
+        repository=mock_user_repository,
+    )
 
     with pytest.raises(
         UserNotFoundError,
-        match=f"User with ID '{user_id}' not found",
+        match=f"User with ID '{user_id}' was not found.",
     ):
-        await user_service.delete_user(user_id)
+        await service.delete_user(user_id)
+
+    mock_user_repository.delete.assert_awaited_once_with(user_id)
+
+
+@pytest.mark.asyncio
+async def test_create_user_unexpected_integrity_error(
+    mock_session: MagicMock,
+    mock_user_repository: MagicMock,
+) -> None:
+    from sqlalchemy.exc import IntegrityError
+
+    original_error = Exception("some unexpected database constraint")
+
+    mock_user_repository.create.side_effect = IntegrityError(
+        statement="INSERT INTO users",
+        params={},
+        orig=original_error,
+    )
+
+    service = UserService(
+        session=mock_session,
+        repository=mock_user_repository,
+    )
+
+    with pytest.raises(IntegrityError):
+        await service.create_user(
+            CreateUserRequest(
+                username="john",
+                email="john@example.com",
+                password="SecurePassword456!",
+                role=UserRole.ADMIN,
+                team_id=None,
+            )
+        )
+
+    mock_user_repository.create.assert_awaited_once()

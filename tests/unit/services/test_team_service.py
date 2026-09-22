@@ -1,194 +1,418 @@
-from collections.abc import Generator
+from datetime import UTC, datetime
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
 
-from app.core.exceptions import TeamNotFoundError
+from app.core.exceptions import ConflictError, TeamNotFoundError
+from app.db.models.team import Team
 from app.schemas.team import CreateTeamRequest, UpdateTeamRequest
-from app.services.team_service import TeamService, teams
+from app.services.team_service import TeamService
 
 
-@pytest.fixture
-def team_service() -> Generator[TeamService]:
-    teams.clear()
+def create_team_model(
+    name: str = "Payments Team",
+    description: str = "Owns payment processing.",
+) -> Team:
+    now = datetime.now(UTC)
 
-    service = TeamService()
-
-    yield service
-
-    teams.clear()
+    return Team(
+        id=uuid4(),
+        name=name,
+        description=description,
+        created_at=now,
+        updated_at=now,
+    )
 
 
 @pytest.mark.asyncio
-async def test_create_team(team_service: TeamService):
-    team_data = CreateTeamRequest(
+async def test_create_team(
+    mock_session: MagicMock,
+    mock_team_repository: MagicMock,
+) -> None:
+    now = datetime.now(UTC)
+
+    team = Team(
+        id=uuid4(),
         name="Payments Team",
-        description=("Owns payment processing services and ensures reliable payment operations."),
+        description="Owns payment processing.",
+        created_at=now,
+        updated_at=now,
     )
 
-    result = await team_service.create_team(team_data)
+    mock_team_repository.create.return_value = team
 
-    assert result.id is not None
+    service = TeamService(
+        session=mock_session,
+        repository=mock_team_repository,
+    )
+
+    result = await service.create_team(
+        CreateTeamRequest(
+            name="Payments Team",
+            description="Owns payment processing.",
+        )
+    )
+
+    assert result.id == team.id
     assert result.name == "Payments Team"
-    assert (
-        result.description
-        == "Owns payment processing services and ensures reliable payment operations."
+    assert result.description == "Owns payment processing."
+    assert result.created_at == now
+    assert result.updated_at == now
+
+    mock_team_repository.create.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_create_team_duplicate_name(
+    mock_session: MagicMock,
+    mock_team_repository: MagicMock,
+) -> None:
+    from sqlalchemy.exc import IntegrityError
+
+    original_error = Exception('duplicate key value violates unique constraint "ix_teams_name"')
+
+    mock_team_repository.create.side_effect = IntegrityError(
+        statement="INSERT INTO teams",
+        params={},
+        orig=original_error,
     )
-    assert result.created_at is not None
-    assert result.updated_at is not None
-    assert result.created_at == result.updated_at
-    assert result.id in teams
-    assert teams[result.id] == result
 
+    service = TeamService(
+        session=mock_session,
+        repository=mock_team_repository,
+    )
 
-@pytest.mark.asyncio
-async def test_get_teams_empty(team_service: TeamService):
-    result = await team_service.get_teams()
-
-    assert result == []
-
-
-@pytest.mark.asyncio
-async def test_get_teams(team_service: TeamService):
-    first_team = await team_service.create_team(
-        CreateTeamRequest(
-            name="Payments Team",
-            description="Owns payment processing.",
+    with pytest.raises(
+        ConflictError,
+        match="A team with this name already exists.",
+    ):
+        await service.create_team(
+            CreateTeamRequest(
+                name="Payments Team",
+                description="Owns payment processing.",
+            )
         )
-    )
 
-    second_team = await team_service.create_team(
-        CreateTeamRequest(
-            name="Users Team",
-            description="Owns user management.",
-        )
-    )
-
-    result = await team_service.get_teams()
-
-    assert len(result) == 2
-    assert first_team in result
-    assert second_team in result
+    mock_team_repository.create.assert_awaited_once()
 
 
 @pytest.mark.asyncio
-async def test_get_team(team_service: TeamService):
-    created_team = await team_service.create_team(
-        CreateTeamRequest(
-            name="Payments Team",
-            description="Owns payment processing.",
-        )
+async def test_get_teams(
+    mock_session: MagicMock,
+    mock_team_repository: MagicMock,
+) -> None:
+    first_team = create_team_model(
+        name="Payments Team",
+        description="Owns payment processing.",
     )
 
-    result = await team_service.get_team(created_team.id)
+    second_team = create_team_model(
+        name="Users Team",
+        description="Owns user management.",
+    )
 
-    assert result == created_team
-    assert result.id == created_team.id
+    mock_team_repository.get_all.return_value = (
+        [first_team, second_team],
+        2,
+    )
+
+    service = TeamService(
+        session=mock_session,
+        repository=mock_team_repository,
+    )
+
+    result = await service.get_teams(
+        limit=20,
+        offset=0,
+    )
+
+    assert result.items
+    assert len(result.items) == 2
+    assert result.total == 2
+    assert result.limit == 20
+    assert result.offset == 0
+
+    assert result.items[0].id == first_team.id
+    assert result.items[0].name == "Payments Team"
+
+    assert result.items[1].id == second_team.id
+    assert result.items[1].name == "Users Team"
+
+    mock_team_repository.get_all.assert_awaited_once_with(
+        limit=20,
+        offset=0,
+    )
 
 
 @pytest.mark.asyncio
-async def test_get_team_not_found(team_service: TeamService):
+async def test_get_teams_empty(
+    mock_session: MagicMock,
+    mock_team_repository: MagicMock,
+) -> None:
+    mock_team_repository.get_all.return_value = (
+        [],
+        0,
+    )
+
+    service = TeamService(
+        session=mock_session,
+        repository=mock_team_repository,
+    )
+
+    result = await service.get_teams(
+        limit=20,
+        offset=0,
+    )
+
+    assert result.items == []
+    assert result.total == 0
+    assert result.limit == 20
+    assert result.offset == 0
+
+    mock_team_repository.get_all.assert_awaited_once_with(
+        limit=20,
+        offset=0,
+    )
+
+
+@pytest.mark.asyncio
+async def test_get_team(
+    mock_session: MagicMock,
+    mock_team_repository: MagicMock,
+) -> None:
+    team = create_team_model()
+
+    mock_team_repository.get_by_id.return_value = team
+
+    service = TeamService(
+        session=mock_session,
+        repository=mock_team_repository,
+    )
+
+    result = await service.get_team(team.id)
+
+    assert result.id == team.id
+    assert result.name == team.name
+    assert result.description == team.description
+    assert result.created_at == team.created_at
+    assert result.updated_at == team.updated_at
+
+    mock_team_repository.get_by_id.assert_awaited_once_with(team.id)
+
+
+@pytest.mark.asyncio
+async def test_get_team_not_found(
+    mock_session: MagicMock,
+    mock_team_repository: MagicMock,
+) -> None:
     team_id = uuid4()
+
+    mock_team_repository.get_by_id.return_value = None
+
+    service = TeamService(
+        session=mock_session,
+        repository=mock_team_repository,
+    )
 
     with pytest.raises(
         TeamNotFoundError,
-        match=f"Team with ID '{team_id}' not found.",
+        match=f"Team with ID '{team_id}' was not found.",
     ):
-        await team_service.get_team(team_id)
+        await service.get_team(team_id)
+
+    mock_team_repository.get_by_id.assert_awaited_once_with(team_id)
 
 
 @pytest.mark.asyncio
-async def test_update_team(team_service: TeamService):
-    created_team = await team_service.create_team(
-        CreateTeamRequest(
-            name="Payments Team",
-            description="Owns payment processing.",
-        )
+async def test_update_team(
+    mock_session: MagicMock,
+    mock_team_repository: MagicMock,
+) -> None:
+    team = create_team_model()
+
+    updated_team = Team(
+        id=team.id,
+        name="Updated Payments Team",
+        description="Updated payment processing team.",
+        created_at=team.created_at,
+        updated_at=datetime.now(UTC),
     )
 
-    original_created_at = created_team.created_at
+    mock_team_repository.update.return_value = updated_team
 
-    updated_team = await team_service.update_team(
-        created_team.id,
+    service = TeamService(
+        session=mock_session,
+        repository=mock_team_repository,
+    )
+
+    result = await service.update_team(
+        team.id,
         UpdateTeamRequest(
             name="Updated Payments Team",
             description="Updated payment processing team.",
         ),
     )
 
-    assert updated_team.id == created_team.id
-    assert updated_team.name == "Updated Payments Team"
-    assert updated_team.description == "Updated payment processing team."
-    assert updated_team.created_at == original_created_at
-    assert updated_team.updated_at is not None
+    assert result.id == team.id
+    assert result.name == "Updated Payments Team"
+    assert result.description == "Updated payment processing team."
+    assert result.created_at == team.created_at
+    assert result.updated_at == updated_team.updated_at
+
+    mock_team_repository.update.assert_awaited_once_with(
+        team.id,
+        {
+            "name": "Updated Payments Team",
+            "description": "Updated payment processing team.",
+        },
+    )
 
 
 @pytest.mark.asyncio
-async def test_update_team_only_updates_provided_fields(
-    team_service: TeamService,
-):
-    created_team = await team_service.create_team(
-        CreateTeamRequest(
-            name="Payments Team",
-            description="Owns payment processing.",
-        )
+async def test_update_team_only_provided_fields(
+    mock_session: MagicMock,
+    mock_team_repository: MagicMock,
+) -> None:
+    team = create_team_model()
+
+    updated_team = Team(
+        id=team.id,
+        name="Updated Payments Team",
+        description=team.description,
+        created_at=team.created_at,
+        updated_at=datetime.now(UTC),
     )
 
-    original_description = created_team.description
-    original_created_at = created_team.created_at
+    mock_team_repository.update.return_value = updated_team
 
-    updated_team = await team_service.update_team(
-        created_team.id,
+    service = TeamService(
+        session=mock_session,
+        repository=mock_team_repository,
+    )
+
+    result = await service.update_team(
+        team.id,
         UpdateTeamRequest(
             name="Updated Payments Team",
         ),
     )
 
-    assert updated_team.name == "Updated Payments Team"
-    assert updated_team.description == original_description
-    assert updated_team.created_at == original_created_at
-    assert updated_team.updated_at is not None
+    assert result.id == team.id
+    assert result.name == "Updated Payments Team"
+    assert result.description == team.description
+
+    mock_team_repository.update.assert_awaited_once_with(
+        team.id,
+        {
+            "name": "Updated Payments Team",
+        },
+    )
 
 
 @pytest.mark.asyncio
-async def test_update_team_not_found(team_service: TeamService):
+async def test_update_team_not_found(
+    mock_session: MagicMock,
+    mock_team_repository: MagicMock,
+) -> None:
     team_id = uuid4()
+
+    mock_team_repository.update.return_value = None
+
+    service = TeamService(
+        session=mock_session,
+        repository=mock_team_repository,
+    )
 
     with pytest.raises(
         TeamNotFoundError,
-        match=f"Team with ID '{team_id}' not found.",
+        match=f"Team with ID '{team_id}' was not found.",
     ):
-        await team_service.update_team(
+        await service.update_team(
             team_id,
             UpdateTeamRequest(
                 name="Updated Payments Team",
             ),
         )
 
-
-@pytest.mark.asyncio
-async def test_delete_team(team_service: TeamService):
-    created_team = await team_service.create_team(
-        CreateTeamRequest(
-            name="Payments Team",
-            description="Owns payment processing.",
-        )
+    mock_team_repository.update.assert_awaited_once_with(
+        team_id,
+        {
+            "name": "Updated Payments Team",
+        },
     )
 
-    assert created_team.id in teams
 
-    result = await team_service.delete_team(created_team.id)
+@pytest.mark.asyncio
+async def test_delete_team(
+    mock_session: MagicMock,
+    mock_team_repository: MagicMock,
+) -> None:
+    team_id = uuid4()
+
+    mock_team_repository.delete.return_value = True
+
+    service = TeamService(
+        session=mock_session,
+        repository=mock_team_repository,
+    )
+
+    result = await service.delete_team(team_id)
 
     assert result is None
-    assert created_team.id not in teams
+
+    mock_team_repository.delete.assert_awaited_once_with(team_id)
 
 
 @pytest.mark.asyncio
-async def test_delete_team_not_found(team_service: TeamService):
+async def test_delete_team_not_found(
+    mock_session: MagicMock,
+    mock_team_repository: MagicMock,
+) -> None:
     team_id = uuid4()
+
+    mock_team_repository.delete.return_value = False
+
+    service = TeamService(
+        session=mock_session,
+        repository=mock_team_repository,
+    )
 
     with pytest.raises(
         TeamNotFoundError,
-        match=f"Team with ID '{team_id}' not found.",
+        match=f"Team with ID '{team_id}' was not found.",
     ):
-        await team_service.delete_team(team_id)
+        await service.delete_team(team_id)
+
+    mock_team_repository.delete.assert_awaited_once_with(team_id)
+
+
+@pytest.mark.asyncio
+async def test_create_team_unexpected_integrity_error(
+    mock_session: MagicMock,
+    mock_team_repository: MagicMock,
+) -> None:
+    from sqlalchemy.exc import IntegrityError
+
+    original_error = Exception("some unexpected database constraint")
+
+    mock_team_repository.create.side_effect = IntegrityError(
+        statement="INSERT INTO teams",
+        params={},
+        orig=original_error,
+    )
+
+    service = TeamService(
+        session=mock_session,
+        repository=mock_team_repository,
+    )
+
+    with pytest.raises(IntegrityError):
+        await service.create_team(
+            CreateTeamRequest(
+                name="Payments Team",
+                description="Owns payment processing.",
+            )
+        )
+
+    mock_team_repository.create.assert_awaited_once()
