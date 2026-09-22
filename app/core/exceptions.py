@@ -32,7 +32,7 @@ class UserNotFoundError(NotFoundError):
     """
 
     def __init__(self, user_id: UUID) -> None:
-        super().__init__(f"User '{user_id}' was not found.")
+        super().__init__(f"User with ID '{user_id}' was not found.")
 
 
 class TeamNotFoundError(NotFoundError):
@@ -41,7 +41,7 @@ class TeamNotFoundError(NotFoundError):
     """
 
     def __init__(self, team_id: UUID) -> None:
-        super().__init__(f"Team '{team_id}' was not found.")
+        super().__init__(f"Team with ID '{team_id}' was not found.")
 
 
 class ServiceNotFoundError(NotFoundError):
@@ -50,7 +50,7 @@ class ServiceNotFoundError(NotFoundError):
     """
 
     def __init__(self, service_id: UUID) -> None:
-        super().__init__(f"Service '{service_id}' was not found.")
+        super().__init__(f"Service with ID '{service_id}' was not found.")
 
 
 class IncidentNotFoundError(NotFoundError):
@@ -59,4 +59,4 @@ class IncidentNotFoundError(NotFoundError):
     """
 
     def __init__(self, incident_id: UUID) -> None:
-        super().__init__(f"Incident '{incident_id}' was not found.")
+        super().__init__(f"Incident with ID '{incident_id}' was not found.")
