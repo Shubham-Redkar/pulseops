@@ -310,7 +310,7 @@ PostgreSQL
 | Reverse Proxy | Nginx |
 | API Documentation | OpenAPI / Swagger |
 | Linting / Formatting | Ruff |
-| Type Checking | mypy |
+| Type Checking | Pyright |
 | Metrics | Prometheus |
 | Observability | OpenTelemetry |
 | CI/CD | GitHub Actions |
@@ -448,7 +448,7 @@ External Monitoring System
 - [x] PostgreSQL integration
 - [x] SQLAlchemy 2.0 models
 - [x] Alembic migrations
-- [ ] Docker
+- [x] Docker & Docker Compose
 - [x] Users, Teams, Services, Incidents
 - [x] Pydantic request/response validation
 - [x] Global error handling
@@ -458,7 +458,6 @@ External Monitoring System
 - [x] Pagination for collection endpoints
 - [x] Unit tests
 - [x] API integration tests
-- [ ] Database integration tests
 
 ### Phase 2 — Authentication & Authorization
 - [ ] JWT authentication
@@ -572,4 +571,4 @@ Coverage focuses on: valid/invalid incident transitions, duplicate alerts, concu
 
 ## Project Status
 
-**Status: Phase 1 — Foundation in Progress** — the FastAPI foundation, CRUD APIs for Users, Teams, Services, and Incidents, Pydantic validation, global error handling, request ID middleware, SQLAlchemy models, Alembic migrations, PostgreSQL integration, repository/service architecture, database-backed CRUD operations, and pagination have been implemented. Docker and database integration tests remain in progress.
+**Status: Phase 1 — Foundation Complete** — The FastAPI foundation, CRUD APIs for Users, Teams, Services, and Incidents, Pydantic validation, global error handling, request ID middleware, SQLAlchemy models, Alembic migrations, PostgreSQL integration, repository/service architecture, database-backed CRUD operations, pagination, Docker, and Docker Compose have been implemented and verified. Unit and API integration tests are passing. Database integration test coverage remains to be added.
