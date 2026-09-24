@@ -1,4 +1,8 @@
+from unittest.mock import AsyncMock, patch
+
 from httpx import AsyncClient
+
+from app.core.exceptions import ServiceUnavailableError
 
 
 async def test_home(async_client: AsyncClient):
@@ -27,7 +31,26 @@ async def test_liveness(async_client: AsyncClient):
 
 
 async def test_readiness(async_client: AsyncClient):
-    response = await async_client.get("/health/ready")
+    with patch(
+        "app.main.check_database",
+        new_callable=AsyncMock,
+    ) as mock_check_database:
+        response = await async_client.get("/health/ready")
+
+    mock_check_database.assert_awaited_once()
 
     assert response.status_code == 200
     assert response.json() == {"status": "ready"}
+
+
+async def test_readiness_when_database_unavailable(
+    async_client: AsyncClient,
+):
+    with patch(
+        "app.main.check_database",
+        new_callable=AsyncMock,
+        side_effect=ServiceUnavailableError("Database is not ready."),
+    ):
+        response = await async_client.get("/health/ready")
+
+    assert response.status_code == 503
