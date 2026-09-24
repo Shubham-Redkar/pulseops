@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
 from ..core.errors import ErrorCode
-from ..core.exceptions import AppException, ConflictError, NotFoundError
+from ..core.exceptions import AppException, ConflictError, NotFoundError, ServiceUnavailableError
 from ..schemas.errors import ErrorResponse
 
 
@@ -99,4 +99,9 @@ def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(
         AppException,
         app_exception_handler,
+    )
+
+    app.add_exception_handler(
+        ServiceUnavailableError,
+        service_unavailable_handler,
     )
