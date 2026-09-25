@@ -44,6 +44,16 @@ class UserRepository:
 
         return result.all(), total or 0
 
+    async def get_by_username(self, username: str) -> User | None:
+        stmt = select(User).where(User.username == username)
+
+        return await self.session.scalar(stmt)
+
+    async def get_by_email(self, email: str) -> User | None:
+        stmt = select(User).where(User.email == email)
+
+        return await self.session.scalar(stmt)
+
     async def update(
         self,
         user_id: UUID,

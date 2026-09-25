@@ -8,11 +8,11 @@ from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.schemas.enums import UserRole
-
+from ...schemas.enums import UserRole
 from .base import Base
 
 if TYPE_CHECKING:
+    from .refresh_token import RefreshToken
     from .team import Team
 
 
@@ -36,6 +36,16 @@ class User(Base):
         PGUUID(as_uuid=True),
         primary_key=True,
         default=uuid4,
+    )
+
+    first_name: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+    )
+
+    last_name: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
     )
 
     username: Mapped[str] = mapped_column(
@@ -84,3 +94,8 @@ class User(Base):
     )
 
     team: Mapped["Team | None"] = relationship(back_populates="users")
+
+    refresh_tokens: Mapped[list["RefreshToken"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )

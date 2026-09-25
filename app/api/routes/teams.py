@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query, status
 
-from ...api.dependencies import TeamServiceDep
+from ...api.dependencies import CurrentUserDep, TeamServiceDep
 from ...schemas.base import PaginatedResponse
 from ...schemas.team import (
     CreateTeamRequest,
@@ -33,6 +33,7 @@ async def create_team(
     response_model=TeamResponse,
 )
 async def get_team(
+    current_user: CurrentUserDep,
     team_id: UUID,
     team_service: TeamServiceDep,
 ) -> TeamResponse:
@@ -44,6 +45,7 @@ async def get_team(
     response_model=PaginatedResponse[TeamResponse],
 )
 async def get_teams(
+    current_user: CurrentUserDep,
     team_service: TeamServiceDep,
     limit: int = Query(
         default=20,
@@ -68,6 +70,7 @@ async def get_teams(
     response_model=TeamResponse,
 )
 async def update_team(
+    current_user: CurrentUserDep,
     team_id: UUID,
     team_data: UpdateTeamRequest,
     team_service: TeamServiceDep,
@@ -80,6 +83,7 @@ async def update_team(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_team(
+    current_user: CurrentUserDep,
     team_id: UUID,
     team_service: TeamServiceDep,
 ) -> None:

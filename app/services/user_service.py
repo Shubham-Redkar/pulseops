@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.exceptions import ConflictError, UserNotFoundError
-from ..core.security import password_hash
+from ..core.security import hash_password
 from ..db.models.user import User
 from ..repositories.user_repository import UserRepository
 from ..schemas.base import PaginatedResponse
@@ -34,7 +34,7 @@ class UserService:
         user = User(
             username=user_data.username,
             email=user_data.email,
-            password_hash=password_hash.hash(user_data.password),
+            password_hash=hash_password(user_data.password.get_secret_value()),
             role=user_data.role,
             team_id=user_data.team_id,
         )

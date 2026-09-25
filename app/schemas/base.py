@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 
 class ORMBaseSchema(BaseModel):
@@ -66,16 +66,10 @@ class PaginatedResponse[T](BaseModel):
     )
 
 
-def strip_and_validate_string(value: str) -> str:
-    """
-    Strip leading/trailing whitespace and reject empty/whitespace-only strings.
-    """
-    value = value.strip()
-
-    if not value:
-        raise ValueError("Must not be empty or whitespace")
-
-    return value
-
-
-CleanString = Annotated[str, AfterValidator(strip_and_validate_string)]
+CleanString = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        min_length=1,
+    ),
+]

@@ -8,7 +8,7 @@ from ...schemas.user import (
     UpdateUserRequest,
     UserResponse,
 )
-from ..dependencies import UserServiceDep
+from ..dependencies import CurrentUserDep, UserServiceDep
 
 router = APIRouter(
     prefix="/users",
@@ -22,6 +22,7 @@ router = APIRouter(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_user(
+    current_user: CurrentUserDep,
     user_data: CreateUserRequest,
     user_service: UserServiceDep,
 ) -> UserResponse:
@@ -33,6 +34,7 @@ async def create_user(
     response_model=UserResponse,
 )
 async def get_user(
+    current_user: CurrentUserDep,
     user_id: UUID,
     user_service: UserServiceDep,
 ) -> UserResponse:
@@ -44,6 +46,7 @@ async def get_user(
     response_model=PaginatedResponse[UserResponse],
 )
 async def get_users(
+    current_user: CurrentUserDep,
     user_service: UserServiceDep,
     limit: int = Query(
         default=20,
@@ -68,6 +71,7 @@ async def get_users(
     response_model=UserResponse,
 )
 async def update_user(
+    current_user: CurrentUserDep,
     user_id: UUID,
     user_data: UpdateUserRequest,
     user_service: UserServiceDep,
@@ -83,6 +87,7 @@ async def update_user(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_user(
+    current_user: CurrentUserDep,
     user_id: UUID,
     user_service: UserServiceDep,
 ) -> None:

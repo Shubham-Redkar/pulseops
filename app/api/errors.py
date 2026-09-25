@@ -2,7 +2,14 @@ from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
 from ..core.errors import ErrorCode
-from ..core.exceptions import AppException, ConflictError, NotFoundError, ServiceUnavailableError
+from ..core.exceptions import (
+    AppException,
+    ConflictError,
+    InvalidTokenError,
+    NotFoundError,
+    ServiceUnavailableError,
+    UnauthorizedError,
+)
 from ..schemas.errors import ErrorResponse
 
 
@@ -83,6 +90,30 @@ async def service_unavailable_handler(
     )
 
 
+async def unauthorized_handler(
+    request: Request,
+    exc: Exception,
+) -> JSONResponse:
+    return create_error_response(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        code=ErrorCode.UNAUTHORIZED_ERROR,
+        message=str(exc),
+        request=request,
+    )
+
+
+async def invalid_token_handler(
+    request: Request,
+    exc: Exception,
+) -> JSONResponse:
+    return create_error_response(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        code=ErrorCode.UNAUTHORIZED_ERROR,
+        message=str(exc),
+        request=request,
+    )
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     """Register application exception handlers."""
 
@@ -104,4 +135,14 @@ def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(
         ServiceUnavailableError,
         service_unavailable_handler,
+    )
+
+    app.add_exception_handler(
+        UnauthorizedError,
+        unauthorized_handler,
+    )
+
+    app.add_exception_handler(
+        InvalidTokenError,
+        invalid_token_handler,
     )
