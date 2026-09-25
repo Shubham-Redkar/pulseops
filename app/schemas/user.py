@@ -11,6 +11,20 @@ class UserBase(BaseModel):
     Common fields shared by user request and response schemas.
     """
 
+    first_name: CleanString = Field(
+        min_length=1,
+        max_length=100,
+        description="First name of the user.",
+        examples=["John"],
+    )
+
+    last_name: CleanString = Field(
+        min_length=1,
+        max_length=100,
+        description="Last name of the user.",
+        examples=["Doe"],
+    )
+
     username: CleanString = Field(
         min_length=3,
         max_length=50,
@@ -45,6 +59,8 @@ class CreateUserRequest(UserBase):
         extra="forbid",
         json_schema_extra={
             "example": {
+                "first_name": "John",
+                "last_name": "Doe",
                 "username": "john",
                 "email": "john@example.com",
                 "password": "SecurePassword456!",
@@ -72,12 +88,30 @@ class UpdateUserRequest(BaseModel):
         extra="forbid",
         json_schema_extra={
             "example": {
+                "first_name": "John",
+                "last_name": "Doe",
                 "username": "john",
                 "email": "john@example.com",
                 "role": "admin",
                 "team_id": "550e8400-e29b-41d4-a716-446655440000",
             }
         },
+    )
+
+    first_name: CleanString | None = Field(
+        default=None,
+        min_length=1,
+        max_length=100,
+        description="First name of the user.",
+        examples=["John"],
+    )
+
+    last_name: CleanString | None = Field(
+        default=None,
+        min_length=1,
+        max_length=100,
+        description="Last name of the user.",
+        examples=["Doe"],
     )
 
     username: CleanString | None = Field(

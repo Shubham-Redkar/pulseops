@@ -32,6 +32,8 @@ class UserService:
     ) -> UserResponse:
 
         user = User(
+            first_name=user_data.first_name,
+            last_name=user_data.last_name,
             username=user_data.username,
             email=user_data.email,
             password_hash=hash_password(user_data.password.get_secret_value()),
