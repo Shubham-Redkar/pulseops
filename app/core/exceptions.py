@@ -35,6 +35,24 @@ class ServiceUnavailableError(AppException):
         self.detail = detail
 
 
+class UnauthorizedError(AppException):
+    """
+    Raised when authentication fails or credentials are invalid.
+    """
+
+    def __init__(self, detail: str = "Authentication failed.") -> None:
+        super().__init__(detail)
+
+
+class InvalidTokenError(AppException):
+    """
+    Raised when an access or refresh token is invalid or expired.
+    """
+
+    def __init__(self, detail: str = "Invalid or expired token.") -> None:
+        super().__init__(detail)
+
+
 class UserNotFoundError(NotFoundError):
     """
     Raised when a user does not exist.

@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr
 
 from .base import CleanString, IDMixin, ORMBaseSchema, TimestampMixin
 from .enums import UserRole
@@ -54,7 +54,7 @@ class CreateUserRequest(UserBase):
         },
     )
 
-    password: str = Field(
+    password: SecretStr = Field(
         min_length=8,
         max_length=128,
         description="Password for the user.",
