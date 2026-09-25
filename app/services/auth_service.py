@@ -36,7 +36,7 @@ class AuthService:
         self,
         data: RegisterRequest,
     ) -> UserResponse:
-        existing_user = await self.user_repository.get_by_username(data.username)
+        existing_user = await self.user_repository.get_by_username(str(data.username))
 
         if existing_user:
             raise ConflictError("Username already exists.")
@@ -82,7 +82,7 @@ class AuthService:
         self,
         data: LoginRequest,
     ) -> TokenResponse:
-        user = await self.user_repository.get_by_username(data.username)
+        user = await self.user_repository.get_by_username(str(data.username))
 
         if not user:
             raise UnauthorizedError("Invalid username or password.")
