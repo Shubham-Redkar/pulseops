@@ -8,7 +8,7 @@ from ...schemas.service import (
     ServiceResponse,
     UpdateServiceRequest,
 )
-from ..dependencies import CurrentUserDep, ServiceManagerDep
+from ..dependencies import AdminUserDep, CurrentUserDep, ServiceManagerDep
 
 router = APIRouter(
     prefix="/services",
@@ -22,7 +22,7 @@ router = APIRouter(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_service(
-    current_user: CurrentUserDep,
+    current_user: AdminUserDep,
     service_data: CreateServiceRequest,
     service_manager: ServiceManagerDep,
 ) -> ServiceResponse:
@@ -71,7 +71,7 @@ async def get_services(
     response_model=ServiceResponse,
 )
 async def update_service(
-    current_user: CurrentUserDep,
+    current_user: AdminUserDep,
     service_id: UUID,
     service_data: UpdateServiceRequest,
     service_manager: ServiceManagerDep,
@@ -87,7 +87,7 @@ async def update_service(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_service(
-    current_user: CurrentUserDep,
+    current_user: AdminUserDep,
     service_id: UUID,
     service_manager: ServiceManagerDep,
 ) -> None:
