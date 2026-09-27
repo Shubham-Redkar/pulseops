@@ -1,6 +1,12 @@
 from fastapi import APIRouter
 
-from ...schemas.auth import LoginRequest, RefreshTokenRequest, RegisterRequest, TokenResponse
+from ...schemas.auth import (
+    ChangePasswordRequest,
+    LoginRequest,
+    RefreshTokenRequest,
+    RegisterRequest,
+    TokenResponse,
+)
 from ...schemas.user import UserResponse
 from ..dependencies import AuthServiceDep, CurrentUserDep
 
@@ -45,3 +51,12 @@ async def logout(
     auth_service: AuthServiceDep,
 ) -> None:
     await auth_service.logout(data)
+
+
+@router.post("/change-password")
+async def change_password(
+    current_user: CurrentUserDep,
+    data: ChangePasswordRequest,
+    auth_service: AuthServiceDep,
+) -> None:
+    await auth_service.change_password(current_user, data)

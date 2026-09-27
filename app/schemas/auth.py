@@ -130,6 +130,25 @@ class LoginRequest(RequestModel):
         return value.lower()
 
 
+class ChangePasswordRequest(RequestModel):
+    """
+    Payload used to change the authenticated user's password.
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "current_password": "OldPassword123!",
+                "new_password": "NewPassword123!",
+            }
+        },
+    )
+
+    current_password: Password
+
+    new_password: Password
+
+
 class RefreshTokenRequest(RequestModel):
     """
     Payload used to request a new access token.
