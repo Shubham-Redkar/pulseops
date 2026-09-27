@@ -23,7 +23,7 @@ class ConflictError(AppException):
     """
 
     def __init__(self, detail: str):
-        self.detail = detail
+        super().__init__(detail)
 
 
 class ServiceUnavailableError(AppException):
@@ -32,7 +32,16 @@ class ServiceUnavailableError(AppException):
     """
 
     def __init__(self, detail: str):
-        self.detail = detail
+        super().__init__(detail)
+
+
+class ForbiddenError(AppException):
+    """
+    Raised when the authenticated user lacks permission.
+    """
+
+    def __init__(self, detail: str = "You do not have permission to perform this action.") -> None:
+        super().__init__(detail)
 
 
 class UnauthorizedError(AppException):

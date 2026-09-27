@@ -37,3 +37,11 @@ async def refresh(
     auth_service: AuthServiceDep,
 ) -> TokenResponse:
     return await auth_service.refresh(data)
+
+
+@router.post("/logout")
+async def logout(
+    data: RefreshTokenRequest,
+    auth_service: AuthServiceDep,
+) -> None:
+    await auth_service.logout(data)

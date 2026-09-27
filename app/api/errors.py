@@ -5,6 +5,7 @@ from ..core.errors import ErrorCode
 from ..core.exceptions import (
     AppException,
     ConflictError,
+    ForbiddenError,
     InvalidTokenError,
     NotFoundError,
     ServiceUnavailableError,
@@ -114,6 +115,18 @@ async def invalid_token_handler(
     )
 
 
+async def forbidden_error_handler(
+    request: Request,
+    exc: Exception,
+) -> JSONResponse:
+    return create_error_response(
+        status_code=status.HTTP_403_FORBIDDEN,
+        code=ErrorCode.FORBIDDEN_ERROR,
+        message=str(exc),
+        request=request,
+    )
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     """Register application exception handlers."""
 
@@ -145,4 +158,9 @@ def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(
         InvalidTokenError,
         invalid_token_handler,
+    )
+
+    app.add_exception_handler(
+        ForbiddenError,
+        forbidden_error_handler,
     )

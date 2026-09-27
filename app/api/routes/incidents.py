@@ -8,7 +8,7 @@ from ...schemas.incident import (
     IncidentResponse,
     UpdateIncidentRequest,
 )
-from ..dependencies import CurrentUserDep, IncidentServiceDep
+from ..dependencies import AdminOrAnalystUserDep, AdminUserDep, CurrentUserDep, IncidentServiceDep
 
 router = APIRouter(
     prefix="/incidents",
@@ -22,7 +22,7 @@ router = APIRouter(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_incident(
-    current_user: CurrentUserDep,
+    current_user: AdminOrAnalystUserDep,
     incident_data: CreateIncidentRequest,
     incident_service: IncidentServiceDep,
 ) -> IncidentResponse:
@@ -71,7 +71,7 @@ async def get_incidents(
     response_model=IncidentResponse,
 )
 async def update_incident(
-    current_user: CurrentUserDep,
+    current_user: AdminOrAnalystUserDep,
     incident_id: UUID,
     incident_data: UpdateIncidentRequest,
     incident_service: IncidentServiceDep,
@@ -87,7 +87,7 @@ async def update_incident(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_incident(
-    current_user: CurrentUserDep,
+    current_user: AdminUserDep,
     incident_id: UUID,
     incident_service: IncidentServiceDep,
 ) -> None:

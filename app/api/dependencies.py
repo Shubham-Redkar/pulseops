@@ -1,3 +1,4 @@
+from collections.abc import Awaitable, Callable
 from typing import Annotated
 from uuid import UUID
 
@@ -5,7 +6,7 @@ from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..core.exceptions import InvalidTokenError, UnauthorizedError
+from ..core.exceptions import ForbiddenError, InvalidTokenError, UnauthorizedError
 from ..core.security import decode_and_validate_access_token
 from ..db.dependencies import get_db
 from ..db.models.user import User
@@ -14,6 +15,7 @@ from ..repositories.refresh_token_repository import RefreshTokenRepository
 from ..repositories.service_repository import ServiceRepository
 from ..repositories.team_repository import TeamRepository
 from ..repositories.user_repository import UserRepository
+from ..schemas.enums import UserRole
 from ..services.auth_service import AuthService
 from ..services.incident_service import IncidentService
 from ..services.service_service import ServiceManager
@@ -146,4 +148,29 @@ def get_auth_service(
 AuthServiceDep = Annotated[
     AuthService,
     Depends(get_auth_service),
+]
+
+
+def require_role(
+    *allowed_roles: UserRole,
+) -> Callable[..., Awaitable[User]]:
+    async def role_dependency(
+        current_user: CurrentUserDep,
+    ) -> User:
+        if current_user.role not in allowed_roles:
+            raise ForbiddenError()
+
+        return current_user
+
+    return role_dependency
+
+
+AdminUserDep = Annotated[
+    User,
+    Depends(require_role(UserRole.ADMIN)),
+]
+
+AdminOrAnalystUserDep = Annotated[
+    User,
+    Depends(require_role(UserRole.ADMIN, UserRole.ANALYST)),
 ]

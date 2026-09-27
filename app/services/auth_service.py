@@ -171,3 +171,24 @@ class AuthService:
             refresh_token=new_refresh_token,
             refresh_expires_in=settings.refresh_token_expire_days * 24 * 60 * 60,
         )
+
+    async def logout(self, data: RefreshTokenRequest) -> None:
+        raw_refresh_token = data.refresh_token.get_secret_value()
+
+        token_hash = hash_refresh_token(raw_refresh_token)
+
+        refresh_token_record = await self.refresh_token_repository.get_by_hash(token_hash)
+
+        if not refresh_token_record:
+            raise UnauthorizedError("Invalid refresh token.")
+
+        now = datetime.now(UTC)
+
+        if refresh_token_record.revoked_at is not None:
+            raise UnauthorizedError("Invalid refresh token.")
+
+        if refresh_token_record.expires_at <= now:
+            raise UnauthorizedError("Refresh token has expired.")
+
+        await self.refresh_token_repository.revoke(refresh_token_record)
+        await self.session.commit()
