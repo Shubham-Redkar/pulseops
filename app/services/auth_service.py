@@ -16,7 +16,13 @@ from ..db.models.refresh_token import RefreshToken
 from ..db.models.user import User
 from ..repositories.refresh_token_repository import RefreshTokenRepository
 from ..repositories.user_repository import UserRepository
-from ..schemas.auth import LoginRequest, RefreshTokenRequest, RegisterRequest, TokenResponse
+from ..schemas.auth import (
+    ChangePasswordRequest,
+    LoginRequest,
+    RefreshTokenRequest,
+    RegisterRequest,
+    TokenResponse,
+)
 from ..schemas.enums import UserRole
 from ..schemas.user import UserResponse
 
@@ -191,4 +197,27 @@ class AuthService:
             raise UnauthorizedError("Refresh token has expired.")
 
         await self.refresh_token_repository.revoke(refresh_token_record)
+        await self.session.commit()
+
+    async def change_password(
+        self,
+        current_user: User,
+        data: ChangePasswordRequest,
+    ) -> None:
+        if not verify_password(
+            data.current_password.get_secret_value(),
+            current_user.password_hash,
+        ):
+            raise UnauthorizedError("Current password is incorrect.")
+
+        if verify_password(
+            data.new_password.get_secret_value(),
+            current_user.password_hash,
+        ):
+            raise ConflictError("New password must be different from the current password.")
+
+        current_user.password_hash = hash_password(data.new_password.get_secret_value())
+
+        await self.refresh_token_repository.revoke_all_for_user(current_user.id)
+
         await self.session.commit()
