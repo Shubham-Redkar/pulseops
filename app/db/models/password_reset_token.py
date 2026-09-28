@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from sqlalchemy import DateTime, ForeignKey, String, text
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from sqlalchemy.dialects.postgresql import UUID as PDUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
@@ -12,22 +12,22 @@ if TYPE_CHECKING:
     from .user import User
 
 
-class RefreshToken(Base):
+class PasswordResetToken(Base):
     """
-    Represents a long-lived, single-use token used to obtain new access tokens.
+    Represents a short-lived, single-use token used to reset a user's password.
     """
 
-    __tablename__ = "refresh_tokens"
+    __tablename__ = "password_reset_token"
 
     id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        PDUUID(as_uuid=True),
         primary_key=True,
         default=uuid4,
     )
 
     user_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
+        PDUUID(as_uuid=True),
+        ForeignKey(column="users.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
@@ -43,17 +43,17 @@ class RefreshToken(Base):
         nullable=False,
     )
 
+    used_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
         server_default=text("CURRENT_TIMESTAMP"),
     )
 
-    revoked_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True,
-    )
-
     user: Mapped["User"] = relationship(
-        back_populates="refresh_tokens",
+        back_populates="password_reset_tokens",
     )

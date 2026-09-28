@@ -3,8 +3,7 @@ from collections.abc import AsyncGenerator
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import ServiceUnavailableError
-
+from ..core.exceptions import ServiceUnavailableError
 from .session import async_session_maker
 
 

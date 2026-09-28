@@ -164,6 +164,44 @@ class RefreshTokenRequest(RequestModel):
     )
 
 
+class ForgotPasswordRequest(RequestModel):
+    """
+    Payload used to request a password reset.
+    """
+
+    email: EmailStr = Field(
+        description="User's email address.",
+        examples=["john@example.com"],
+    )
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: EmailStr) -> str:
+        return str(value).lower()
+
+
+class ResetPasswordRequest(RequestModel):
+    """
+    Payload used to reset a user's password using a password reset token.
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "reset_token": "dBjftJeZ4CVP-mB92K27uhbU...",
+                "new_password": "NewStrongPassword123!",
+            }
+        },
+    )
+
+    reset_token: SecretStr = Field(
+        min_length=1,
+        description="Password reset token.",
+    )
+
+    new_password: Password
+
+
 class TokenResponse(BaseModel):
     """
     Authentication tokens returned after successful login.

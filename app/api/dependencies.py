@@ -10,17 +10,22 @@ from ..core.exceptions import ForbiddenError, InvalidTokenError, UnauthorizedErr
 from ..core.security import decode_and_validate_access_token
 from ..db.dependencies import get_db
 from ..db.models.user import User
-from ..repositories.incident_repository import IncidentRepository
-from ..repositories.refresh_token_repository import RefreshTokenRepository
-from ..repositories.service_repository import ServiceRepository
-from ..repositories.team_repository import TeamRepository
-from ..repositories.user_repository import UserRepository
+from ..repositories import (
+    IncidentRepository,
+    PasswordResetTokenRepository,
+    RefreshTokenRepository,
+    ServiceRepository,
+    TeamRepository,
+    UserRepository,
+)
 from ..schemas.enums import UserRole
-from ..services.auth_service import AuthService
-from ..services.incident_service import IncidentService
-from ..services.service_service import ServiceManager
-from ..services.team_service import TeamService
-from ..services.user_service import UserService
+from ..services import (
+    AuthService,
+    IncidentService,
+    ServiceManager,
+    TeamService,
+    UserService,
+)
 
 SessionDep = Annotated[
     AsyncSession,
@@ -142,6 +147,7 @@ def get_auth_service(
         session=session,
         user_repository=UserRepository(session),
         refresh_token_repository=RefreshTokenRepository(session),
+        password_reset_token_repository=PasswordResetTokenRepository(session),
     )
 
 
