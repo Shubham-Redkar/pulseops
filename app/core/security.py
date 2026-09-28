@@ -120,3 +120,17 @@ def verify_refresh_token(token: str, token_hash: str) -> bool:
     expected_hash = hash_refresh_token(token)
 
     return secrets.compare_digest(expected_hash, token_hash)
+
+
+def generate_password_reset_token() -> str:
+    """
+    Generate a cryptographically secure password reset token.
+    """
+    return secrets.token_urlsafe(32)
+
+
+def hash_password_reset_token(token: str) -> str:
+    """
+    Hash a password reset token for secure database storage.
+    """
+    return hashlib.sha256(token.encode()).hexdigest()

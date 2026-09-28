@@ -21,6 +21,11 @@ class Settings(BaseSettings):
         le=365,
     )
 
+    password_reset_token_expire_minutes: int = Field(
+        ge=1,
+        le=60,
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

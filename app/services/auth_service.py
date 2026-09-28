@@ -7,20 +7,30 @@ from ..core.config import settings
 from ..core.exceptions import ConflictError, UnauthorizedError
 from ..core.security import (
     create_access_token,
+    generate_password_reset_token,
     generate_refresh_token,
     hash_password,
+    hash_password_reset_token,
     hash_refresh_token,
     verify_password,
 )
-from ..db.models.refresh_token import RefreshToken
-from ..db.models.user import User
-from ..repositories.refresh_token_repository import RefreshTokenRepository
-from ..repositories.user_repository import UserRepository
+from ..db.models import (
+    PasswordResetToken,
+    RefreshToken,
+    User,
+)
+from ..repositories import (
+    PasswordResetTokenRepository,
+    RefreshTokenRepository,
+    UserRepository,
+)
 from ..schemas.auth import (
     ChangePasswordRequest,
+    ForgotPasswordRequest,
     LoginRequest,
     RefreshTokenRequest,
     RegisterRequest,
+    ResetPasswordRequest,
     TokenResponse,
 )
 from ..schemas.enums import UserRole
@@ -33,10 +43,12 @@ class AuthService:
         session: AsyncSession,
         user_repository: UserRepository,
         refresh_token_repository: RefreshTokenRepository,
+        password_reset_token_repository: PasswordResetTokenRepository,
     ) -> None:
         self.session = session
         self.user_repository = user_repository
         self.refresh_token_repository = refresh_token_repository
+        self.password_reset_token_repository = password_reset_token_repository
 
     async def register(
         self,
@@ -221,3 +233,75 @@ class AuthService:
         await self.refresh_token_repository.revoke_all_for_user(current_user.id)
 
         await self.session.commit()
+
+    async def forgot_password(
+        self,
+        data: ForgotPasswordRequest,
+    ) -> None:
+        user = await self.user_repository.get_by_email(data.email)
+
+        if not user:
+            return None
+
+        raw_token = generate_password_reset_token()
+
+        token_hash = hash_password_reset_token(raw_token)
+
+        now = datetime.now(UTC)
+
+        reset_token = PasswordResetToken(
+            user_id=user.id,
+            token_hash=token_hash,
+            expires_at=now + timedelta(minutes=settings.password_reset_token_expire_minutes),
+            used_at=None,
+        )
+
+        try:
+            await self.password_reset_token_repository.invalidate_unused_for_user(user.id)
+            await self.password_reset_token_repository.create(reset_token)
+            await self.session.commit()
+        except IntegrityError as exc:
+            await self.session.rollback()
+            raise ConflictError("Unable to create password reset token.") from exc
+
+    async def reset_password(
+        self,
+        data: ResetPasswordRequest,
+    ) -> None:
+
+        raw_token = data.reset_token.get_secret_value()
+
+        token_hash = hash_password_reset_token(raw_token)
+
+        reset_token = await self.password_reset_token_repository.get_by_hash(
+            token_hash,
+        )
+
+        now = datetime.now(UTC)
+
+        if not reset_token or reset_token.used_at is not None or reset_token.expires_at <= now:
+            raise UnauthorizedError("Invalid or expired password reset token.")
+
+        user = await self.user_repository.get_by_id(reset_token.user_id)
+
+        if not user:
+            raise UnauthorizedError("Invalid or expired password reset token.")
+
+        if verify_password(
+            data.new_password.get_secret_value(),
+            user.password_hash,
+        ):
+            raise ConflictError("New password must be different from the current password.")
+
+        user.password_hash = hash_password(data.new_password.get_secret_value())
+
+        reset_token.used_at = now
+
+        await self.refresh_token_repository.revoke_all_for_user(user.id)
+
+        try:
+            await self.session.commit()
+
+        except IntegrityError as exc:
+            await self.session.rollback()
+            raise ConflictError("Unable to reset password.") from exc

@@ -8,8 +8,7 @@ from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.schemas.enums import Environment, IncidentSeverity
-
+from ...schemas.enums import Environment, IncidentSeverity
 from .base import Base
 
 if TYPE_CHECKING:
