@@ -141,6 +141,31 @@ class UpdateUserRequest(BaseModel):
         description="Unique identifier for the team.",
     )
 
+    is_active: bool | None = Field(
+        default=None,
+        description="Whether the user account is active.",
+    )
+
+
+class UpdateUserStatusRequest(BaseModel):
+    """
+    Request body for activating or deactivating a user account.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "example": {
+                "is_active": False,
+            }
+        },
+    )
+
+    is_active: bool = Field(
+        description="Whether the user account should be active.",
+        examples=[True],
+    )
+
 
 class UserResponse(
     ORMBaseSchema,
@@ -151,3 +176,30 @@ class UserResponse(
     """
     Response representation of a user.
     """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "id": "550e8400-e29b-41d4-a716-446655440000",
+                "first_name": "John",
+                "last_name": "Doe",
+                "username": "john",
+                "email": "john@example.com",
+                "role": "admin",
+                "team_id": "550e8400-e29b-41d4-a716-446655440000",
+                "email_verified": True,
+                "is_active": True,
+                "created_at": "2026-09-29T10:30:00Z",
+                "updated_at": "2026-09-29T10:30:00Z",
+            }
+        },
+    )
+
+    email_verified: bool = Field(
+        description="Whether the user's email address has been verified.",
+        examples=[True],
+    )
+
+    is_active: bool = Field(
+        description="Whether the user account is active.",
+    )

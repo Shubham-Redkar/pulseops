@@ -133,4 +133,24 @@ def hash_password_reset_token(token: str) -> str:
     """
     Hash a password reset token for secure database storage.
     """
+    if not token:
+        raise ValueError("Password reset token must not be empty.")
+
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def generate_email_verification_token() -> str:
+    """
+    Generate a cryptographically secure email verification token.
+    """
+    return secrets.token_urlsafe(32)
+
+
+def hash_email_verification_token(token: str) -> str:
+    """
+    Hash an email verification token for secure database storage.
+    """
+    if not token:
+        raise ValueError("Email verification token must not be empty.")
+
     return hashlib.sha256(token.encode()).hexdigest()

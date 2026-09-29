@@ -4,12 +4,22 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..core.exceptions import ConflictError, UserNotFoundError
+from ..core.exceptions import (
+    ConflictError,
+    UserNotFoundError,
+)
 from ..core.security import hash_password
 from ..db.models.user import User
-from ..repositories.user_repository import UserRepository
+from ..repositories import (
+    RefreshTokenRepository,
+    UserRepository,
+)
 from ..schemas.base import PaginatedResponse
-from ..schemas.user import CreateUserRequest, UpdateUserRequest, UserResponse
+from ..schemas.user import (
+    CreateUserRequest,
+    UpdateUserRequest,
+    UserResponse,
+)
 from ..types.user import UserUpdateData
 
 
@@ -21,10 +31,12 @@ class UserService:
     def __init__(
         self,
         session: AsyncSession,
-        repository: UserRepository,
+        user_repository: UserRepository,
+        refresh_token_repository: RefreshTokenRepository,
     ) -> None:
         self.session = session
-        self.repository = repository
+        self.user_repository = user_repository
+        self.refresh_token_repository = refresh_token_repository
 
     async def create_user(
         self,
@@ -43,7 +55,7 @@ class UserService:
 
         try:
             async with self.session.begin():
-                user = await self.repository.create(user)
+                user = await self.user_repository.create(user)
         except IntegrityError as exc:
             error = str(exc.orig)
 
@@ -58,7 +70,7 @@ class UserService:
         return UserResponse.model_validate(user)
 
     async def get_user(self, user_id: UUID) -> UserResponse:
-        if (user := await self.repository.get_by_id(user_id)) is None:
+        if (user := await self.user_repository.get_by_id(user_id)) is None:
             raise UserNotFoundError(user_id)
 
         return UserResponse.model_validate(user)
@@ -68,7 +80,7 @@ class UserService:
         limit: int,
         offset: int,
     ) -> PaginatedResponse[UserResponse]:
-        users, total = await self.repository.get_all(
+        users, total = await self.user_repository.get_all(
             limit=limit,
             offset=offset,
         )
@@ -91,7 +103,7 @@ class UserService:
         )
         async with self.session.begin():
             if (
-                user := await self.repository.update(
+                user := await self.user_repository.update(
                     user_id,
                     update_data,
                 )
@@ -102,7 +114,30 @@ class UserService:
 
     async def delete_user(self, user_id: UUID) -> None:
         async with self.session.begin():
-            deleted = await self.repository.delete(user_id)
+            deleted = await self.user_repository.delete(user_id)
 
             if not deleted:
                 raise UserNotFoundError(user_id)
+
+    async def update_user_status(
+        self,
+        user_id: UUID,
+        is_active: bool,
+    ) -> UserResponse:
+        user = await self.user_repository.get_by_id(user_id)
+
+        if not user:
+            raise UserNotFoundError(user_id)
+
+        if user.is_active == is_active:
+            return UserResponse.model_validate(user)
+
+        user.is_active = is_active
+
+        if not is_active:
+            await self.refresh_token_repository.revoke_all_for_user(user.id)
+
+        await self.session.commit()
+        await self.session.refresh(user)
+
+        return UserResponse.model_validate(user)
