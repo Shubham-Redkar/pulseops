@@ -8,6 +8,7 @@ from ...schemas.auth import (
     RegisterRequest,
     ResetPasswordRequest,
     TokenResponse,
+    VerifyEmailRequest,
 )
 from ...schemas.user import UserResponse
 from ..dependencies import AuthServiceDep, CurrentUserDep
@@ -102,3 +103,11 @@ async def reset_password(
     auth_service: AuthServiceDep,
 ) -> None:
     await auth_service.reset_password(data)
+
+
+@router.post("/verify-email")
+async def verify_email(
+    data: VerifyEmailRequest,
+    auth_service: AuthServiceDep,
+) -> None:
+    await auth_service.verify_email(data)

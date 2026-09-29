@@ -22,7 +22,7 @@ router = APIRouter(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_service(
-    current_user: AdminUserDep,
+    _: AdminUserDep,
     service_data: CreateServiceRequest,
     service_manager: ServiceManagerDep,
 ) -> ServiceResponse:
@@ -34,7 +34,7 @@ async def create_service(
     response_model=ServiceResponse,
 )
 async def get_service(
-    current_user: CurrentUserDep,
+    _: CurrentUserDep,
     service_id: UUID,
     service_manager: ServiceManagerDep,
 ) -> ServiceResponse:
@@ -46,7 +46,7 @@ async def get_service(
     response_model=PaginatedResponse[ServiceResponse],
 )
 async def get_services(
-    current_user: CurrentUserDep,
+    _: CurrentUserDep,
     service_manager: ServiceManagerDep,
     limit: int = Query(
         default=20,
@@ -71,7 +71,7 @@ async def get_services(
     response_model=ServiceResponse,
 )
 async def update_service(
-    current_user: AdminUserDep,
+    _: AdminUserDep,
     service_id: UUID,
     service_data: UpdateServiceRequest,
     service_manager: ServiceManagerDep,
@@ -87,7 +87,7 @@ async def update_service(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_service(
-    current_user: AdminUserDep,
+    _: AdminUserDep,
     service_id: UUID,
     service_manager: ServiceManagerDep,
 ) -> None:

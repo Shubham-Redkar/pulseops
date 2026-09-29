@@ -22,7 +22,7 @@ router = APIRouter(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_incident(
-    current_user: AdminOrAnalystUserDep,
+    _: AdminOrAnalystUserDep,
     incident_data: CreateIncidentRequest,
     incident_service: IncidentServiceDep,
 ) -> IncidentResponse:
@@ -34,7 +34,7 @@ async def create_incident(
     response_model=IncidentResponse,
 )
 async def get_incident(
-    current_user: CurrentUserDep,
+    _: CurrentUserDep,
     incident_id: UUID,
     incident_service: IncidentServiceDep,
 ) -> IncidentResponse:
@@ -46,7 +46,7 @@ async def get_incident(
     response_model=PaginatedResponse[IncidentResponse],
 )
 async def get_incidents(
-    current_user: CurrentUserDep,
+    _: CurrentUserDep,
     incident_service: IncidentServiceDep,
     limit: int = Query(
         default=20,
@@ -71,7 +71,7 @@ async def get_incidents(
     response_model=IncidentResponse,
 )
 async def update_incident(
-    current_user: AdminOrAnalystUserDep,
+    _: AdminOrAnalystUserDep,
     incident_id: UUID,
     incident_data: UpdateIncidentRequest,
     incident_service: IncidentServiceDep,
@@ -87,7 +87,7 @@ async def update_incident(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_incident(
-    current_user: AdminUserDep,
+    _: AdminUserDep,
     incident_id: UUID,
     incident_service: IncidentServiceDep,
 ) -> None:

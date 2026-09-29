@@ -26,6 +26,11 @@ class Settings(BaseSettings):
         le=60,
     )
 
+    email_verification_token_expire_minutes: int = Field(
+        ge=1,
+        le=60,
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

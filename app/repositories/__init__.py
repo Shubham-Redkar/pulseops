@@ -1,3 +1,4 @@
+from .email_verification_token_repository import EmailVerificationTokenRepository
 from .incident_repository import IncidentRepository
 from .password_reset_token_repository import PasswordResetTokenRepository
 from .refresh_token_repository import RefreshTokenRepository
@@ -12,4 +13,5 @@ __all__ = [
     "UserRepository",
     "RefreshTokenRepository",
     "PasswordResetTokenRepository",
+    "EmailVerificationTokenRepository",
 ]

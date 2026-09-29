@@ -22,7 +22,7 @@ router = APIRouter(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_team(
-    current_user: AdminUserDep,
+    _: AdminUserDep,
     team_data: CreateTeamRequest,
     team_service: TeamServiceDep,
 ) -> TeamResponse:
@@ -34,7 +34,7 @@ async def create_team(
     response_model=TeamResponse,
 )
 async def get_team(
-    current_user: CurrentUserDep,
+    _: CurrentUserDep,
     team_id: UUID,
     team_service: TeamServiceDep,
 ) -> TeamResponse:
@@ -46,7 +46,7 @@ async def get_team(
     response_model=PaginatedResponse[TeamResponse],
 )
 async def get_teams(
-    current_user: CurrentUserDep,
+    _: CurrentUserDep,
     team_service: TeamServiceDep,
     limit: int = Query(
         default=20,
@@ -71,7 +71,7 @@ async def get_teams(
     response_model=TeamResponse,
 )
 async def update_team(
-    current_user: AdminUserDep,
+    _: AdminUserDep,
     team_id: UUID,
     team_data: UpdateTeamRequest,
     team_service: TeamServiceDep,
@@ -84,7 +84,7 @@ async def update_team(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_team(
-    current_user: AdminUserDep,
+    _: AdminUserDep,
     team_id: UUID,
     team_service: TeamServiceDep,
 ) -> None:

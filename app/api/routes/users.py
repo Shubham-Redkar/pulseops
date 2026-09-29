@@ -6,6 +6,7 @@ from ...schemas.base import PaginatedResponse
 from ...schemas.user import (
     CreateUserRequest,
     UpdateUserRequest,
+    UpdateUserStatusRequest,
     UserResponse,
 )
 from ..dependencies import AdminOrAnalystUserDep, AdminUserDep, UserServiceDep
@@ -22,7 +23,7 @@ router = APIRouter(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_user(
-    current_user: AdminUserDep,
+    _: AdminUserDep,
     user_data: CreateUserRequest,
     user_service: UserServiceDep,
 ) -> UserResponse:
@@ -34,7 +35,7 @@ async def create_user(
     response_model=UserResponse,
 )
 async def get_user(
-    current_user: AdminOrAnalystUserDep,
+    _: AdminOrAnalystUserDep,
     user_id: UUID,
     user_service: UserServiceDep,
 ) -> UserResponse:
@@ -46,7 +47,7 @@ async def get_user(
     response_model=PaginatedResponse[UserResponse],
 )
 async def get_users(
-    current_user: AdminOrAnalystUserDep,
+    _: AdminOrAnalystUserDep,
     user_service: UserServiceDep,
     limit: int = Query(
         default=20,
@@ -71,7 +72,7 @@ async def get_users(
     response_model=UserResponse,
 )
 async def update_user(
-    current_user: AdminUserDep,
+    _: AdminUserDep,
     user_id: UUID,
     user_data: UpdateUserRequest,
     user_service: UserServiceDep,
@@ -87,8 +88,24 @@ async def update_user(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_user(
-    current_user: AdminUserDep,
+    _: AdminUserDep,
     user_id: UUID,
     user_service: UserServiceDep,
 ) -> None:
     await user_service.delete_user(user_id)
+
+
+@router.patch(
+    "/{user_id}/status",
+    response_model=UserResponse,
+)
+async def update_user_status(
+    user_id: UUID,
+    data: UpdateUserStatusRequest,
+    user_service: UserServiceDep,
+    _: AdminUserDep,
+) -> UserResponse:
+    return await user_service.update_user_status(
+        user_id=user_id,
+        is_active=data.is_active,
+    )

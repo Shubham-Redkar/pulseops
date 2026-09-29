@@ -7,19 +7,23 @@ from ..core.config import settings
 from ..core.exceptions import ConflictError, UnauthorizedError
 from ..core.security import (
     create_access_token,
+    generate_email_verification_token,
     generate_password_reset_token,
     generate_refresh_token,
+    hash_email_verification_token,
     hash_password,
     hash_password_reset_token,
     hash_refresh_token,
     verify_password,
 )
 from ..db.models import (
+    EmailVerificationToken,
     PasswordResetToken,
     RefreshToken,
     User,
 )
 from ..repositories import (
+    EmailVerificationTokenRepository,
     PasswordResetTokenRepository,
     RefreshTokenRepository,
     UserRepository,
@@ -32,6 +36,7 @@ from ..schemas.auth import (
     RegisterRequest,
     ResetPasswordRequest,
     TokenResponse,
+    VerifyEmailRequest,
 )
 from ..schemas.enums import UserRole
 from ..schemas.user import UserResponse
@@ -44,11 +49,13 @@ class AuthService:
         user_repository: UserRepository,
         refresh_token_repository: RefreshTokenRepository,
         password_reset_token_repository: PasswordResetTokenRepository,
+        email_verification_token_repository: EmailVerificationTokenRepository,
     ) -> None:
         self.session = session
         self.user_repository = user_repository
         self.refresh_token_repository = refresh_token_repository
         self.password_reset_token_repository = password_reset_token_repository
+        self.email_verification_token_repository = email_verification_token_repository
 
     async def register(
         self,
@@ -74,10 +81,33 @@ class AuthService:
             password_hash=password_hash,
             role=UserRole.VIEWER,
             team_id=None,
+            email_verified=False,
+            is_active=True,
         )
 
         try:
             user = await self.user_repository.create(user)
+
+            raw_token = generate_email_verification_token()
+
+            print(f"EMAIL VERIFICATION TOKEN: {raw_token}")
+
+            token_hash = hash_email_verification_token(raw_token)
+
+            now = datetime.now(UTC)
+
+            verification_token = EmailVerificationToken(
+                user_id=user.id,
+                token_hash=token_hash,
+                expires_at=now
+                + timedelta(minutes=settings.email_verification_token_expire_minutes),
+                used_at=None,
+            )
+
+            await self.email_verification_token_repository.create(
+                verification_token,
+            )
+
             await self.session.commit()
             await self.session.refresh(user)
 
@@ -110,6 +140,12 @@ class AuthService:
             user.password_hash,
         ):
             raise UnauthorizedError("Invalid username or password.")
+
+        if not user.is_active:
+            raise UnauthorizedError("User account is inactive.")
+
+        if not user.email_verified:
+            raise UnauthorizedError("Email address is not verified.")
 
         access_token = create_access_token(str(user.id))
 
@@ -305,3 +341,43 @@ class AuthService:
         except IntegrityError as exc:
             await self.session.rollback()
             raise ConflictError("Unable to reset password.") from exc
+
+    async def verify_email(
+        self,
+        data: VerifyEmailRequest,
+    ) -> None:
+        raw_token = data.token.get_secret_value()
+
+        token_hash = hash_email_verification_token(raw_token)
+
+        verification_token = await self.email_verification_token_repository.get_by_hash(
+            token_hash,
+        )
+
+        now = datetime.now(UTC)
+
+        if (
+            not verification_token
+            or verification_token.used_at is not None
+            or verification_token.expires_at <= now
+        ):
+            raise UnauthorizedError("Invalid or expired email verification token.")
+
+        user = await self.user_repository.get_by_id(
+            verification_token.user_id,
+        )
+
+        if not user:
+            raise UnauthorizedError("Invalid or expired email verification token.")
+
+        if user.email_verified:
+            raise ConflictError("Email is already verified.")
+
+        user.email_verified = True
+        verification_token.used_at = now
+
+        try:
+            await self.session.commit()
+        except IntegrityError as exc:
+            await self.session.rollback()
+            raise ConflictError("Unable to verify email.") from exc

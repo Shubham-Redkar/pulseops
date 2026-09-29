@@ -11,6 +11,7 @@ from ..core.security import decode_and_validate_access_token
 from ..db.dependencies import get_db
 from ..db.models.user import User
 from ..repositories import (
+    EmailVerificationTokenRepository,
     IncidentRepository,
     PasswordResetTokenRepository,
     RefreshTokenRepository,
@@ -109,7 +110,8 @@ def get_user_service(
     """
     return UserService(
         session=session,
-        repository=UserRepository(session),
+        user_repository=UserRepository(session),
+        refresh_token_repository=RefreshTokenRepository(session),
     )
 
 
@@ -148,6 +150,7 @@ def get_auth_service(
         user_repository=UserRepository(session),
         refresh_token_repository=RefreshTokenRepository(session),
         password_reset_token_repository=PasswordResetTokenRepository(session),
+        email_verification_token_repository=EmailVerificationTokenRepository(session),
     )
 
 

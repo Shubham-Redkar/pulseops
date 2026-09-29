@@ -202,6 +202,25 @@ class ResetPasswordRequest(RequestModel):
     new_password: Password
 
 
+class VerifyEmailRequest(RequestModel):
+    """
+    Payload used to verify a user's email address.
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "token": "dBjftJeZ4CVP-mB92K27uhbU...",
+            }
+        },
+    )
+
+    token: SecretStr = Field(
+        min_length=1,
+        description="Email verification token.",
+    )
+
+
 class TokenResponse(BaseModel):
     """
     Authentication tokens returned after successful login.
