@@ -4,6 +4,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.exceptions import IncidentNotFoundError
+from ..core.types import IncidentUpdateData
 from ..db.models.incident import Incident
 from ..repositories.incident_repository import IncidentRepository
 from ..schemas.base import PaginatedResponse
@@ -12,7 +13,6 @@ from ..schemas.incident import (
     IncidentResponse,
     UpdateIncidentRequest,
 )
-from ..types.incident import IncidentUpdateData
 
 
 class IncidentService:

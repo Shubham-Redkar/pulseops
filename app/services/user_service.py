@@ -9,6 +9,7 @@ from ..core.exceptions import (
     UserNotFoundError,
 )
 from ..core.security import hash_password
+from ..core.types import UserUpdateData
 from ..db.models.user import User
 from ..repositories import (
     RefreshTokenRepository,
@@ -20,7 +21,6 @@ from ..schemas.user import (
     UpdateUserRequest,
     UserResponse,
 )
-from ..types.user import UserUpdateData
 
 
 class UserService:

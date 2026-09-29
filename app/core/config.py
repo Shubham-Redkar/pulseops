@@ -31,6 +31,16 @@ class Settings(BaseSettings):
         le=60,
     )
 
+    account_lockout_minutes: int = Field(
+        ge=1,
+        le=30,
+    )
+
+    account_login_attempts: int = Field(
+        ge=1,
+        le=10,
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

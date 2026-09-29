@@ -4,8 +4,8 @@ from uuid import UUID
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..core.types import TeamUpdateData
 from ..db.models.team import Team
-from ..types.team import TeamUpdateData
 
 
 class TeamRepository:

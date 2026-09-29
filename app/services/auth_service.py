@@ -135,17 +135,36 @@ class AuthService:
         if not user:
             raise UnauthorizedError("Invalid username or password.")
 
+        if not user.is_active:
+            raise UnauthorizedError("User account is inactive.")
+
+        now = datetime.now(UTC)
+
+        if user.locked_until is not None:
+            if user.locked_until > now:
+                raise UnauthorizedError("Account is temporarily locked.")
+
+            user.locked_until = None
+            user.failed_login_attempts = 0
+
         if not verify_password(
             data.password.get_secret_value(),
             user.password_hash,
         ):
-            raise UnauthorizedError("Invalid username or password.")
+            user.failed_login_attempts += 1
 
-        if not user.is_active:
-            raise UnauthorizedError("User account is inactive.")
+            if user.failed_login_attempts >= settings.account_login_attempts:
+                user.locked_until = now + timedelta(minutes=settings.account_lockout_minutes)
+
+            await self.session.commit()
+
+            raise UnauthorizedError("Invalid username or password.")
 
         if not user.email_verified:
             raise UnauthorizedError("Email address is not verified.")
+
+        user.failed_login_attempts = 0
+        user.locked_until = None
 
         access_token = create_access_token(str(user.id))
 

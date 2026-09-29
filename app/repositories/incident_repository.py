@@ -4,8 +4,8 @@ from uuid import UUID
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..core.types import IncidentUpdateData
 from ..db.models.incident import Incident
-from ..types.incident import IncidentUpdateData
 
 
 class IncidentRepository:
