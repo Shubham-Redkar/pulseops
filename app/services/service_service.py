@@ -5,11 +5,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.exceptions import ConflictError, ServiceNotFoundError
+from ..core.types import ServiceUpdateData
 from ..db.models.service import Service
 from ..repositories.service_repository import ServiceRepository
 from ..schemas.base import PaginatedResponse
 from ..schemas.service import CreateServiceRequest, ServiceResponse, UpdateServiceRequest
-from ..types.service import ServiceUpdateData
 
 
 class ServiceManager:

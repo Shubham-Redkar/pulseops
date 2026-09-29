@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db.models.refresh_token import RefreshToken
@@ -55,3 +55,17 @@ class RefreshTokenRepository:
 
         await self.session.execute(stmt)
         await self.session.flush()
+
+    async def delete_expired_or_revoked(self) -> int:
+        stmt = (
+            delete(RefreshToken)
+            .where(
+                (RefreshToken.expires_at <= datetime.now(UTC))
+                | (RefreshToken.revoked_at.is_not(None))
+            )
+            .returning(RefreshToken.id)
+        )
+
+        result = await self.session.execute(stmt)
+
+        return len(result.all())

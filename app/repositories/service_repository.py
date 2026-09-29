@@ -3,8 +3,8 @@ from uuid import UUID
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..core.types import ServiceUpdateData
 from ..db.models.service import Service
-from ..types.service import ServiceUpdateData
 
 
 class ServiceRepository:

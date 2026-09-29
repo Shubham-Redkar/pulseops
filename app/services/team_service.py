@@ -5,11 +5,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.exceptions import ConflictError, TeamNotFoundError
+from ..core.types import TeamUpdateData
 from ..db.models.team import Team
 from ..repositories.team_repository import TeamRepository
 from ..schemas.base import PaginatedResponse
 from ..schemas.team import CreateTeamRequest, TeamResponse, UpdateTeamRequest
-from ..types.team import TeamUpdateData
 
 
 class TeamService:

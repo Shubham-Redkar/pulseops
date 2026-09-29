@@ -4,8 +4,8 @@ from uuid import UUID
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..core.types import UserUpdateData
 from ..db.models.user import User
-from ..types.user import UserUpdateData
 
 
 class UserRepository:
