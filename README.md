@@ -134,6 +134,37 @@ OPEN → RESOLVED           ❌
 RESOLVED → INVESTIGATING  ❌
 ```
 
+### Authentication & Authorization
+
+PulseOps uses JWT-based authentication with an OAuth2 password flow.
+
+Authentication includes:
+
+- User registration and login
+- Password hashing
+- Email verification
+- Password reset
+- Password change
+- Access-token generation
+- Refresh-token rotation
+- Refresh-token revocation
+- Account activation/deactivation
+- Account-level login lockout
+
+Role-based authorization is enforced through:
+
+```text
+ADMIN
+  ├── Administrative operations
+  ├── User management
+  └── Protected system operations
+
+ANALYST
+  └── Incident investigation and operational workflows
+
+VIEWER
+  └── Read-only access
+
 ### Pagination
 
 Collection endpoints support limit/offset pagination:
@@ -296,7 +327,7 @@ PostgreSQL
 
 | Area | Technology |
 |---|---|
-| Language | Python 3.12 |
+| Language | Python 3.13 |
 | Package Manager | uv |
 | API | FastAPI |
 | Database | PostgreSQL |
@@ -304,7 +335,7 @@ PostgreSQL
 | Migrations | Alembic |
 | Cache | Redis |
 | Background Jobs | Celery |
-| Authentication | JWT / OAuth2 |
+| Authentication | JWT / OAuth2 Password Flow |
 | Testing | pytest |
 | Containerization | Docker |
 | Reverse Proxy | Nginx |
@@ -380,9 +411,12 @@ pulseops/
 
 ```
 users · teams · services · on_call_schedules
+refresh_tokens · email_verification_tokens · password_reset_tokens
 alerts · incidents · incident_events · incident_assignments
 notifications · audit_logs · idempotency_keys
 ```
+
+Users support authentication and account lifecycle management through password hashing, email verification, account activation/deactivation, login lockout, and refresh-token persistence.
 
 ```
 Team
@@ -460,9 +494,22 @@ External Monitoring System
 - [x] API integration tests
 
 ### Phase 2 — Authentication & Authorization
-- [ ] JWT authentication
-- [ ] OAuth2 integration
-- [ ] Role-based access control (Admin, Engineer, Viewer)
+- [x] JWT authentication
+- [x] OAuth2 password flow
+- [x] Role-based access control (Admin, Engineer, Viewer)
+- [x] Password hashing with Argon2
+- [x] User registration and login
+- [x] Email verification
+- [x] Password reset flow
+- [x] Change password
+- [x] Account activation/deactivation
+- [x] Account-level brute-force protection / lockout
+- [x] Refresh token rotation
+- [x] Refresh token revocation
+- [x] Refresh token cleanup
+- [x] Protected API endpoints
+- [x] Authentication and authorization error handling
+- [ ] Exhaustive RBAC tests
 
 ### Phase 3 — Alert Ingestion
 - [ ] Alert ingestion endpoint & validation
@@ -565,10 +612,18 @@ tests/
     └── workers/
 ```
 
-Coverage focuses on: valid/invalid incident transitions, duplicate alerts, concurrent alert ingestion, idempotent requests, authorization failures, database transaction failures, worker failures, retry behavior, and rate limiting.
+Coverage focuses on: authentication flows, password validation, email verification, password reset, refresh-token rotation and revocation, account activation/deactivation, account lockout, authorization failures, RBAC, valid/invalid incident transitions, duplicate alerts, concurrent alert ingestion, idempotent requests, database transaction failures, worker failures, retry behavior, and rate limiting.
 
 ---
 
 ## Project Status
 
-**Status: Phase 1 — Foundation Complete** — The FastAPI foundation, CRUD APIs for Users, Teams, Services, and Incidents, Pydantic validation, global error handling, request ID middleware, SQLAlchemy models, Alembic migrations, PostgreSQL integration, repository/service architecture, database-backed CRUD operations, pagination, Docker, and Docker Compose have been implemented and verified. Unit and API integration tests are passing. Database integration test coverage remains to be added.
+**Status: Phase 2 — Authentication & Authorization Complete**
+
+Phase 1 foundation is complete, including the FastAPI application, PostgreSQL integration, SQLAlchemy models, Alembic migrations, Docker and Docker Compose, CRUD APIs for Users, Teams, Services, and Incidents, Pydantic validation, global error handling, request ID middleware, repository/service architecture, database-backed CRUD operations, pagination, and API integration tests.
+
+Phase 2 authentication and authorization has been implemented, including JWT authentication, OAuth2 password flow, password hashing, user registration and login, email verification, password reset, password change, account activation/deactivation, account-level login lockout, refresh-token rotation and revocation, protected endpoints, and RBAC.
+
+Remaining Phase 2 work is primarily additional authentication/RBAC test coverage and refresh-token cleanup testing.
+
+Database integration test coverage continues to be expanded.
