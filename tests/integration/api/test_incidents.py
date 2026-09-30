@@ -7,11 +7,11 @@ from app.schemas.enums import Environment, IncidentSeverity
 
 
 async def create_team(
-    async_client: AsyncClient,
+    auth_client: AsyncClient,
     name: str = "Payments Team",
     description: str = "Owns payment processing services.",
 ) -> dict[str, Any]:
-    response = await async_client.post(
+    response = await auth_client.post(
         "/api/v1/teams",
         json={
             "name": name,
@@ -25,12 +25,12 @@ async def create_team(
 
 
 async def create_service(
-    async_client: AsyncClient,
+    auth_client: AsyncClient,
     team_id: UUID,
     name: str = "payment-service",
     description: str = "Handles payment processing and transaction management.",
 ) -> dict[str, Any]:
-    response = await async_client.post(
+    response = await auth_client.post(
         "/api/v1/services",
         json={
             "name": name,
@@ -45,14 +45,14 @@ async def create_service(
 
 
 async def create_incident(
-    async_client: AsyncClient,
+    auth_client: AsyncClient,
     service_id: UUID,
     title: str = "Payment API error rate elevated",
     description: str = "Error rate exceeded the production threshold.",
     environment: Environment = Environment.PRODUCTION,
     severity: IncidentSeverity = IncidentSeverity.CRITICAL,
 ) -> dict[str, Any]:
-    response = await async_client.post(
+    response = await auth_client.post(
         "/api/v1/incidents",
         json={
             "title": title,
@@ -68,14 +68,14 @@ async def create_incident(
     return response.json()
 
 
-async def test_create_incident(async_client: AsyncClient):
-    team = await create_team(async_client)
+async def test_create_incident(auth_client: AsyncClient):
+    team = await create_team(auth_client)
     team_id = UUID(team["id"])
 
-    service = await create_service(async_client, team_id)
+    service = await create_service(auth_client, team_id)
     service_id = UUID(service["id"])
 
-    response = await async_client.post(
+    response = await auth_client.post(
         "/api/v1/incidents",
         json={
             "title": "Payment API error rate elevated",
@@ -100,17 +100,17 @@ async def test_create_incident(async_client: AsyncClient):
     assert "updated_at" in data
 
 
-async def test_get_incident_by_id(async_client: AsyncClient):
-    team = await create_team(async_client)
+async def test_get_incident_by_id(auth_client: AsyncClient):
+    team = await create_team(auth_client)
     team_id = UUID(team["id"])
 
-    service = await create_service(async_client, team_id)
+    service = await create_service(auth_client, team_id)
     service_id = UUID(service["id"])
 
-    incident = await create_incident(async_client, service_id)
+    incident = await create_incident(auth_client, service_id)
     incident_id = UUID(incident["id"])
 
-    response = await async_client.get(
+    response = await auth_client.get(
         f"/api/v1/incidents/{incident_id}",
     )
 
@@ -128,27 +128,27 @@ async def test_get_incident_by_id(async_client: AsyncClient):
     assert "updated_at" in data
 
 
-async def test_get_incidents(async_client: AsyncClient):
-    team = await create_team(async_client)
+async def test_get_incidents(auth_client: AsyncClient):
+    team = await create_team(auth_client)
     team_id = UUID(team["id"])
 
-    service = await create_service(async_client, team_id)
+    service = await create_service(auth_client, team_id)
     service_id = UUID(service["id"])
 
     await create_incident(
-        async_client,
+        auth_client,
         service_id,
         title="Payment incident",
     )
 
     await create_incident(
-        async_client,
+        auth_client,
         service_id,
         title="Order incident",
         severity=IncidentSeverity.HIGH,
     )
 
-    response = await async_client.get(
+    response = await auth_client.get(
         "/api/v1/incidents?limit=1&offset=0",
     )
 
@@ -169,17 +169,17 @@ async def test_get_incidents(async_client: AsyncClient):
     assert len(data["items"]) == 1
 
 
-async def test_update_incident(async_client: AsyncClient):
-    team = await create_team(async_client)
+async def test_update_incident(auth_client: AsyncClient):
+    team = await create_team(auth_client)
     team_id = UUID(team["id"])
 
-    service = await create_service(async_client, team_id)
+    service = await create_service(auth_client, team_id)
     service_id = UUID(service["id"])
 
-    incident = await create_incident(async_client, service_id)
+    incident = await create_incident(auth_client, service_id)
     incident_id = UUID(incident["id"])
 
-    response = await async_client.patch(
+    response = await auth_client.patch(
         f"/api/v1/incidents/{incident_id}",
         json={
             "severity": "low",
@@ -200,43 +200,43 @@ async def test_update_incident(async_client: AsyncClient):
     assert "updated_at" in data
 
 
-async def test_delete_incident(async_client: AsyncClient):
-    team = await create_team(async_client)
+async def test_delete_incident(auth_client: AsyncClient):
+    team = await create_team(auth_client)
     team_id = UUID(team["id"])
 
-    service = await create_service(async_client, team_id)
+    service = await create_service(auth_client, team_id)
     service_id = UUID(service["id"])
 
-    incident = await create_incident(async_client, service_id)
+    incident = await create_incident(auth_client, service_id)
     incident_id = UUID(incident["id"])
 
-    response = await async_client.delete(
+    response = await auth_client.delete(
         f"/api/v1/incidents/{incident_id}",
     )
 
     assert response.status_code == 204
 
-    get_response = await async_client.get(
+    get_response = await auth_client.get(
         f"/api/v1/incidents/{incident_id}",
     )
 
     assert get_response.status_code == 404
 
 
-async def test_get_incident_not_found(async_client: AsyncClient):
+async def test_get_incident_not_found(auth_client: AsyncClient):
     incident_id = uuid4()
 
-    response = await async_client.get(
+    response = await auth_client.get(
         f"/api/v1/incidents/{incident_id}",
     )
 
     assert response.status_code == 404
 
 
-async def test_update_incident_not_found(async_client: AsyncClient):
+async def test_update_incident_not_found(auth_client: AsyncClient):
     incident_id = uuid4()
 
-    response = await async_client.patch(
+    response = await auth_client.patch(
         f"/api/v1/incidents/{incident_id}",
         json={
             "title": "Payment incident",
@@ -246,10 +246,10 @@ async def test_update_incident_not_found(async_client: AsyncClient):
     assert response.status_code == 404
 
 
-async def test_delete_incident_not_found(async_client: AsyncClient):
+async def test_delete_incident_not_found(auth_client: AsyncClient):
     incident_id = uuid4()
 
-    response = await async_client.delete(
+    response = await auth_client.delete(
         f"/api/v1/incidents/{incident_id}",
     )
 

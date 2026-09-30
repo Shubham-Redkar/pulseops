@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 from uuid import UUID, uuid4
 
 import pytest
+from pydantic import SecretStr
 from sqlalchemy.exc import IntegrityError
 
 from app.core.exceptions import ConflictError, UserNotFoundError
@@ -15,18 +16,24 @@ from app.services.user_service import UserService
 def create_user_model(
     username: str = "john",
     email: str = "john@example.com",
-    role: UserRole = UserRole.ANALYST,
+    role: UserRole = UserRole.ADMIN,
+    first_name: str = "John",
+    last_name: str = "Doe",
     team_id: UUID | None = None,
 ) -> User:
     now = datetime.now(UTC)
 
     return User(
         id=uuid4(),
+        first_name=first_name,
+        last_name=last_name,
         username=username,
         email=email,
         password_hash="hashed-password",
         role=role,
         team_id=team_id,
+        is_active=True,
+        email_verified=True,
         created_at=now,
         updated_at=now,
     )
@@ -40,6 +47,8 @@ async def test_create_user(
     team_id = uuid4()
 
     user = create_user_model(
+        first_name="John",
+        last_name="Doe",
         username="john",
         email="john@example.com",
         role=UserRole.ANALYST,
@@ -50,20 +59,25 @@ async def test_create_user(
 
     service = UserService(
         session=mock_session,
-        repository=mock_user_repository,
+        user_repository=mock_user_repository,
+        refresh_token_repository=MagicMock(),
     )
 
     result = await service.create_user(
         CreateUserRequest(
+            first_name="John",
+            last_name="Doe",
             username="john",
             email="john@example.com",
-            password="SecurePassword456!",
+            password=SecretStr("SecurePassword456!"),
             role=UserRole.ANALYST,
             team_id=team_id,
         )
     )
 
     assert result.id == user.id
+    assert result.first_name == "John"
+    assert result.last_name == "Doe"
     assert result.username == "john"
     assert result.email == "john@example.com"
     assert result.role == UserRole.ANALYST
@@ -75,11 +89,13 @@ async def test_create_user(
 
     created_user = mock_user_repository.create.call_args.args[0]
 
+    assert created_user.first_name == "John"
+    assert created_user.last_name == "Doe"
     assert created_user.username == "john"
     assert created_user.email == "john@example.com"
     assert created_user.role == UserRole.ANALYST
     assert created_user.team_id == team_id
-    assert created_user.password_hash != "SecurePassword456!"
+    assert created_user.password_hash != ("SecurePassword456!")
 
 
 @pytest.mark.asyncio
@@ -97,7 +113,8 @@ async def test_create_user_duplicate_username(
 
     service = UserService(
         session=mock_session,
-        repository=mock_user_repository,
+        user_repository=mock_user_repository,
+        refresh_token_repository=MagicMock(),
     )
 
     with pytest.raises(
@@ -106,9 +123,11 @@ async def test_create_user_duplicate_username(
     ):
         await service.create_user(
             CreateUserRequest(
+                first_name="John",
+                last_name="Doe",
                 username="john",
                 email="john@example.com",
-                password="SecurePassword456!",
+                password=SecretStr("SecurePassword456!"),
                 role=UserRole.ANALYST,
             )
         )
@@ -131,7 +150,8 @@ async def test_create_user_duplicate_email(
 
     service = UserService(
         session=mock_session,
-        repository=mock_user_repository,
+        user_repository=mock_user_repository,
+        refresh_token_repository=MagicMock(),
     )
 
     with pytest.raises(
@@ -140,9 +160,11 @@ async def test_create_user_duplicate_email(
     ):
         await service.create_user(
             CreateUserRequest(
+                first_name="John",
+                last_name="Doe",
                 username="john",
                 email="john@example.com",
-                password="SecurePassword456!",
+                password=SecretStr("SecurePassword456!"),
                 role=UserRole.ANALYST,
             )
         )
@@ -161,12 +183,15 @@ async def test_get_user(
 
     service = UserService(
         session=mock_session,
-        repository=mock_user_repository,
+        user_repository=mock_user_repository,
+        refresh_token_repository=MagicMock(),
     )
 
     result = await service.get_user(user.id)
 
     assert result.id == user.id
+    assert result.first_name == user.first_name
+    assert result.last_name == user.last_name
     assert result.username == user.username
     assert result.email == user.email
     assert result.role == user.role
@@ -188,7 +213,8 @@ async def test_get_user_not_found(
 
     service = UserService(
         session=mock_session,
-        repository=mock_user_repository,
+        user_repository=mock_user_repository,
+        refresh_token_repository=MagicMock(),
     )
 
     with pytest.raises(
@@ -206,11 +232,15 @@ async def test_get_users(
     mock_user_repository: MagicMock,
 ) -> None:
     first_user = create_user_model(
+        first_name="John",
+        last_name="Doe",
         username="john",
         email="john@example.com",
     )
 
     second_user = create_user_model(
+        first_name="Jane",
+        last_name="Doe",
         username="jane",
         email="jane@example.com",
     )
@@ -222,7 +252,8 @@ async def test_get_users(
 
     service = UserService(
         session=mock_session,
-        repository=mock_user_repository,
+        user_repository=mock_user_repository,
+        refresh_token_repository=MagicMock(),
     )
 
     result = await service.get_users(
@@ -237,9 +268,13 @@ async def test_get_users(
     assert result.offset == 0
 
     assert result.items[0].id == first_user.id
+    assert result.items[0].first_name == "John"
+    assert result.items[0].last_name == "Doe"
     assert result.items[0].username == "john"
 
     assert result.items[1].id == second_user.id
+    assert result.items[1].first_name == "Jane"
+    assert result.items[1].last_name == "Doe"
     assert result.items[1].username == "jane"
 
     mock_user_repository.get_all.assert_awaited_once_with(
@@ -260,7 +295,8 @@ async def test_get_users_empty(
 
     service = UserService(
         session=mock_session,
-        repository=mock_user_repository,
+        user_repository=mock_user_repository,
+        refresh_token_repository=MagicMock(),
     )
 
     result = await service.get_users(
@@ -288,11 +324,15 @@ async def test_update_user(
 
     updated_user = User(
         id=user.id,
+        first_name="Updated",
+        last_name="User",
         username="updated_john",
         email="updated@example.com",
         password_hash=user.password_hash,
         role=UserRole.ADMIN,
         team_id=user.team_id,
+        is_active=True,
+        email_verified=True,
         created_at=user.created_at,
         updated_at=datetime.now(UTC),
     )
@@ -301,12 +341,15 @@ async def test_update_user(
 
     service = UserService(
         session=mock_session,
-        repository=mock_user_repository,
+        user_repository=mock_user_repository,
+        refresh_token_repository=MagicMock(),
     )
 
     result = await service.update_user(
         user.id,
         UpdateUserRequest(
+            first_name="Updated",
+            last_name="User",
             username="updated_john",
             email="updated@example.com",
             role=UserRole.ADMIN,
@@ -314,6 +357,8 @@ async def test_update_user(
     )
 
     assert result.id == user.id
+    assert result.first_name == "Updated"
+    assert result.last_name == "User"
     assert result.username == "updated_john"
     assert result.email == "updated@example.com"
     assert result.role == UserRole.ADMIN
@@ -324,6 +369,8 @@ async def test_update_user(
     mock_user_repository.update.assert_awaited_once_with(
         user.id,
         {
+            "first_name": "Updated",
+            "last_name": "User",
             "username": "updated_john",
             "email": "updated@example.com",
             "role": UserRole.ADMIN,
@@ -340,11 +387,15 @@ async def test_update_user_only_provided_fields(
 
     updated_user = User(
         id=user.id,
+        first_name="Updated",
+        last_name=user.last_name,
         username="updated_john",
         email=user.email,
         password_hash=user.password_hash,
         role=user.role,
         team_id=user.team_id,
+        is_active=True,
+        email_verified=True,
         created_at=user.created_at,
         updated_at=datetime.now(UTC),
     )
@@ -353,17 +404,21 @@ async def test_update_user_only_provided_fields(
 
     service = UserService(
         session=mock_session,
-        repository=mock_user_repository,
+        user_repository=mock_user_repository,
+        refresh_token_repository=MagicMock(),
     )
 
     result = await service.update_user(
         user.id,
         UpdateUserRequest(
+            first_name="Updated",
             username="updated_john",
         ),
     )
 
     assert result.id == user.id
+    assert result.first_name == "Updated"
+    assert result.last_name == user.last_name
     assert result.username == "updated_john"
     assert result.email == user.email
     assert result.role == user.role
@@ -371,6 +426,7 @@ async def test_update_user_only_provided_fields(
     mock_user_repository.update.assert_awaited_once_with(
         user.id,
         {
+            "first_name": "Updated",
             "username": "updated_john",
         },
     )
@@ -387,7 +443,8 @@ async def test_update_user_not_found(
 
     service = UserService(
         session=mock_session,
-        repository=mock_user_repository,
+        user_repository=mock_user_repository,
+        refresh_token_repository=MagicMock(),
     )
 
     with pytest.raises(
@@ -397,6 +454,8 @@ async def test_update_user_not_found(
         await service.update_user(
             user_id,
             UpdateUserRequest(
+                first_name="Updated",
+                last_name="User",
                 username="updated_john",
             ),
         )
@@ -404,6 +463,8 @@ async def test_update_user_not_found(
     mock_user_repository.update.assert_awaited_once_with(
         user_id,
         {
+            "first_name": "Updated",
+            "last_name": "User",
             "username": "updated_john",
         },
     )
@@ -420,7 +481,8 @@ async def test_delete_user(
 
     service = UserService(
         session=mock_session,
-        repository=mock_user_repository,
+        user_repository=mock_user_repository,
+        refresh_token_repository=MagicMock(),
     )
 
     result = await service.delete_user(user_id)
@@ -441,7 +503,8 @@ async def test_delete_user_not_found(
 
     service = UserService(
         session=mock_session,
-        repository=mock_user_repository,
+        user_repository=mock_user_repository,
+        refresh_token_repository=MagicMock(),
     )
 
     with pytest.raises(
@@ -458,8 +521,6 @@ async def test_create_user_unexpected_integrity_error(
     mock_session: MagicMock,
     mock_user_repository: MagicMock,
 ) -> None:
-    from sqlalchemy.exc import IntegrityError
-
     original_error = Exception("some unexpected database constraint")
 
     mock_user_repository.create.side_effect = IntegrityError(
@@ -470,15 +531,18 @@ async def test_create_user_unexpected_integrity_error(
 
     service = UserService(
         session=mock_session,
-        repository=mock_user_repository,
+        user_repository=mock_user_repository,
+        refresh_token_repository=MagicMock(),
     )
 
     with pytest.raises(IntegrityError):
         await service.create_user(
             CreateUserRequest(
+                first_name="John",
+                last_name="Doe",
                 username="john",
                 email="john@example.com",
-                password="SecurePassword456!",
+                password=SecretStr("SecurePassword456!"),
                 role=UserRole.ADMIN,
                 team_id=None,
             )

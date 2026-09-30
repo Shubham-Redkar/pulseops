@@ -2,6 +2,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories.incident_repository import IncidentRepository
+from app.repositories.refresh_token_repository import RefreshTokenRepository
 from app.repositories.service_repository import ServiceRepository
 from app.repositories.team_repository import TeamRepository
 from app.repositories.user_repository import UserRepository
@@ -25,3 +26,8 @@ def incident_repository(test_session: AsyncSession) -> IncidentRepository:
 @pytest.fixture
 def user_repository(test_session: AsyncSession) -> UserRepository:
     return UserRepository(test_session)
+
+
+@pytest.fixture
+def refresh_token_repository(test_session: AsyncSession) -> RefreshTokenRepository:
+    return RefreshTokenRepository(test_session)
