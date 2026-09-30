@@ -1,3 +1,4 @@
+from .alert import Alert
 from .email_verification_token import EmailVerificationToken
 from .incident import Incident
 from .password_reset_token import PasswordResetToken
@@ -7,6 +8,7 @@ from .team import Team
 from .user import User
 
 __all__ = [
+    "Alert",
     "EmailVerificationToken",
     "Incident",
     "PasswordResetToken",
