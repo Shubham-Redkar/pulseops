@@ -14,6 +14,8 @@ async def test_create_user(
     user_repository: UserRepository,
 ):
     user = User(
+        first_name="Alice",
+        last_name="Smith",
         username="alice",
         email="alice@example.com",
         password_hash="hashed-password",
@@ -36,6 +38,8 @@ async def test_get_by_id(
     user_repository: UserRepository,
 ):
     user = User(
+        first_name="Alice",
+        last_name="Smith",
         username="alice",
         email="alice@example.com",
         password_hash="hashed-password",
@@ -59,13 +63,17 @@ async def test_get_all(
     user_repository: UserRepository,
 ):
     first_user = User(
+        first_name="Alice",
+        last_name="Smith",
         username="alice",
         email="alice@example.com",
-        password_hash="hashed-password-1",
+        password_hash="hashed-password",
         role=UserRole.VIEWER,
     )
 
     second_user = User(
+        first_name="Bob",
+        last_name="Lively",
         username="bob",
         email="bob@example.com",
         password_hash="hashed-password-2",
@@ -90,15 +98,26 @@ async def test_get_all_pagination(
     test_session: AsyncSession,
     user_repository: UserRepository,
 ):
-    for username in ["alice", "bob", "charlie"]:
-        await user_repository.create(
-            User(
-                username=username,
-                email=f"{username}@example.com",
-                password_hash="hashed-password",
-                role=UserRole.VIEWER,
-            )
-        )
+    first_user = User(
+        first_name="Alice",
+        last_name="Smith",
+        username="alice",
+        email="alice@example.com",
+        password_hash="hashed-password",
+        role=UserRole.VIEWER,
+    )
+
+    second_user = User(
+        first_name="Bob",
+        last_name="Lively",
+        username="bob",
+        email="bob@example.com",
+        password_hash="hashed-password-2",
+        role=UserRole.ANALYST,
+    )
+
+    await user_repository.create(first_user)
+    await user_repository.create(second_user)
 
     await test_session.commit()
 
@@ -108,7 +127,7 @@ async def test_get_all_pagination(
     )
 
     assert len(users) == 2
-    assert total == 3
+    assert total == 2
 
 
 @pytest.mark.asyncio
@@ -117,6 +136,8 @@ async def test_update_user(
     user_repository: UserRepository,
 ):
     user = User(
+        first_name="Alice",
+        last_name="Smith",
         username="alice",
         email="alice@example.com",
         password_hash="hashed-password",
@@ -164,6 +185,8 @@ async def test_update_user_empty_values(
     user_repository: UserRepository,
 ):
     user = User(
+        first_name="Alice",
+        last_name="Smith",
         username="alice",
         email="alice@example.com",
         password_hash="hashed-password",
@@ -190,6 +213,8 @@ async def test_delete_user(
     user_repository: UserRepository,
 ):
     user = User(
+        first_name="Alice",
+        last_name="Smith",
         username="alice",
         email="alice@example.com",
         password_hash="hashed-password",

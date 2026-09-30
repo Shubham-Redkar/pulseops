@@ -5,13 +5,13 @@ from httpx import AsyncClient
 
 
 async def create_team(
-    async_client: AsyncClient,
+    auth_client: AsyncClient,
     name: str = "Payments Team",
     description: str = (
         "Owns payment processing services and ensures reliable payment operations."
     ),
 ) -> dict[str, Any]:
-    response = await async_client.post(
+    response = await auth_client.post(
         "/api/v1/teams",
         json={
             "name": name,
@@ -24,8 +24,8 @@ async def create_team(
     return response.json()
 
 
-async def test_create_team(async_client: AsyncClient):
-    response = await async_client.post(
+async def test_create_team(auth_client: AsyncClient):
+    response = await auth_client.post(
         "/api/v1/teams",
         json={
             "name": "Payments Team",
@@ -49,20 +49,20 @@ async def test_create_team(async_client: AsyncClient):
     assert "updated_at" in data
 
 
-async def test_get_teams(async_client: AsyncClient):
+async def test_get_teams(auth_client: AsyncClient):
     await create_team(
-        async_client,
+        auth_client,
         name="Payments Team",
         description="Owns payment processing services.",
     )
 
     await create_team(
-        async_client,
+        auth_client,
         name="Orders Team",
         description="Owns order processing services.",
     )
 
-    response = await async_client.get(
+    response = await auth_client.get(
         "/api/v1/teams?limit=1&offset=0",
     )
 
@@ -82,12 +82,12 @@ async def test_get_teams(async_client: AsyncClient):
     assert len(data["items"]) == 1
 
 
-async def test_get_team_by_id(async_client: AsyncClient):
-    team = await create_team(async_client)
+async def test_get_team_by_id(auth_client: AsyncClient):
+    team = await create_team(auth_client)
 
     team_id = UUID(team["id"])
 
-    response = await async_client.get(
+    response = await auth_client.get(
         f"/api/v1/teams/{team_id}",
     )
 
@@ -102,12 +102,12 @@ async def test_get_team_by_id(async_client: AsyncClient):
     assert "updated_at" in data
 
 
-async def test_update_team(async_client: AsyncClient):
-    team = await create_team(async_client)
+async def test_update_team(auth_client: AsyncClient):
+    team = await create_team(auth_client)
 
     team_id = UUID(team["id"])
 
-    response = await async_client.patch(
+    response = await auth_client.patch(
         f"/api/v1/teams/{team_id}",
         json={
             "name": "Updated Payment Team",
@@ -131,38 +131,38 @@ async def test_update_team(async_client: AsyncClient):
     assert "updated_at" in data
 
 
-async def test_delete_team(async_client: AsyncClient):
-    team = await create_team(async_client)
+async def test_delete_team(auth_client: AsyncClient):
+    team = await create_team(auth_client)
 
     team_id = UUID(team["id"])
 
-    response = await async_client.delete(
+    response = await auth_client.delete(
         f"/api/v1/teams/{team_id}",
     )
 
     assert response.status_code == 204
 
-    get_response = await async_client.get(
+    get_response = await auth_client.get(
         f"/api/v1/teams/{team_id}",
     )
 
     assert get_response.status_code == 404
 
 
-async def test_get_team_not_found(async_client: AsyncClient):
+async def test_get_team_not_found(auth_client: AsyncClient):
     team_id = uuid4()
 
-    response = await async_client.get(
+    response = await auth_client.get(
         f"/api/v1/teams/{team_id}",
     )
 
     assert response.status_code == 404
 
 
-async def test_update_team_not_found(async_client: AsyncClient):
+async def test_update_team_not_found(auth_client: AsyncClient):
     team_id = uuid4()
 
-    response = await async_client.patch(
+    response = await auth_client.patch(
         f"/api/v1/teams/{team_id}",
         json={
             "name": "Updated Team",
@@ -172,23 +172,23 @@ async def test_update_team_not_found(async_client: AsyncClient):
     assert response.status_code == 404
 
 
-async def test_delete_team_not_found(async_client: AsyncClient):
+async def test_delete_team_not_found(auth_client: AsyncClient):
     team_id = uuid4()
 
-    response = await async_client.delete(
+    response = await auth_client.delete(
         f"/api/v1/teams/{team_id}",
     )
 
     assert response.status_code == 404
 
 
-async def test_create_duplicate_team(async_client: AsyncClient):
+async def test_create_duplicate_team(auth_client: AsyncClient):
     await create_team(
-        async_client,
+        auth_client,
         name="Payments Team",
     )
 
-    response = await async_client.post(
+    response = await auth_client.post(
         "/api/v1/teams",
         json={
             "name": "Payments Team",
