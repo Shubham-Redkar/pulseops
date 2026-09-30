@@ -11,6 +11,7 @@ from ..core.security import decode_and_validate_access_token
 from ..db.dependencies import get_db
 from ..db.models.user import User
 from ..repositories import (
+    AlertRepository,
     EmailVerificationTokenRepository,
     IncidentRepository,
     PasswordResetTokenRepository,
@@ -21,6 +22,7 @@ from ..repositories import (
 )
 from ..schemas.enums import UserRole
 from ..services import (
+    AlertService,
     AuthService,
     IncidentService,
     ServiceManager,
@@ -136,6 +138,24 @@ def get_incident_service(
 IncidentServiceDep = Annotated[
     IncidentService,
     Depends(get_incident_service),
+]
+
+
+def get_alert_service(
+    session: SessionDep,
+) -> AlertService:
+    """
+    Provide an alert service with its database dependencies.
+    """
+    return AlertService(
+        session=session,
+        repository=AlertRepository(session),
+    )
+
+
+AlertServiceDep = Annotated[
+    AlertService,
+    Depends(get_alert_service),
 ]
 
 

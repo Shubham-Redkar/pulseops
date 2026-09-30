@@ -509,7 +509,7 @@ External Monitoring System
 - [x] Refresh token cleanup
 - [x] Protected API endpoints
 - [x] Authentication and authorization error handling
-- [ ] Exhaustive RBAC tests
+- [x] Exhaustive authentication and RBAC tests
 
 ### Phase 3 — Alert Ingestion
 - [ ] Alert ingestion endpoint & validation
@@ -624,6 +624,6 @@ Phase 1 foundation is complete, including the FastAPI application, PostgreSQL in
 
 Phase 2 authentication and authorization has been implemented, including JWT authentication, OAuth2 password flow, password hashing, user registration and login, email verification, password reset, password change, account activation/deactivation, account-level login lockout, refresh-token rotation and revocation, protected endpoints, and RBAC.
 
-Remaining Phase 2 work is primarily additional authentication/RBAC test coverage and refresh-token cleanup testing.
+Phase 2 authentication test coverage is complete.
 
-Database integration test coverage continues to be expanded.
+The project is now ready to begin **Phase 3 — Alert Ingestion**. Database integration test coverage continues to be expanded.

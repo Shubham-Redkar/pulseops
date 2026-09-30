@@ -96,3 +96,12 @@ class IncidentNotFoundError(NotFoundError):
 
     def __init__(self, incident_id: UUID) -> None:
         super().__init__(f"Incident with ID '{incident_id}' was not found.")
+
+
+class AlertNotFoundError(NotFoundError):
+    """
+    Raised when an alert does not exist.
+    """
+
+    def __init__(self, alert_id: UUID) -> None:
+        super().__init__(f"Alert with ID '{alert_id}' was not found.")

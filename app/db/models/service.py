@@ -9,6 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base
 
 if TYPE_CHECKING:
+    from .alert import Alert
     from .incident import Incident
     from .team import Team
 
@@ -66,5 +67,9 @@ class Service(Base):
     )
 
     incidents: Mapped[list["Incident"]] = relationship(
+        back_populates="service",
+    )
+
+    alerts: Mapped[list["Alert"]] = relationship(
         back_populates="service",
     )

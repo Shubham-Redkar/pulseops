@@ -8,10 +8,11 @@ from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from ...schemas.enums import Environment, IncidentSeverity
+from ...schemas.enums import Environment, IncidentSeverity, IncidentStatus
 from .base import Base
 
 if TYPE_CHECKING:
+    from .alert import Alert
     from .service import Service
 
 
@@ -73,6 +74,18 @@ class Incident(Base):
         nullable=False,
     )
 
+    status: Mapped[IncidentStatus] = mapped_column(
+        ENUM(
+            IncidentStatus,
+            name="incident_status_enum",
+            create_type=False,
+            values_callable=enum_values,
+        ),
+        nullable=False,
+        default=IncidentStatus.OPEN,
+        server_default="open",
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -88,4 +101,8 @@ class Incident(Base):
 
     service: Mapped["Service"] = relationship(
         back_populates="incidents",
+    )
+
+    alerts: Mapped[list["Alert"]] = relationship(
+        back_populates="incident",
     )

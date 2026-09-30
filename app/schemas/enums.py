@@ -18,6 +18,14 @@ class Environment(StrEnum):
     PRODUCTION = "production"
 
 
+class IncidentStatus(StrEnum):
+    """Current lifecycle state of an incident."""
+
+    OPEN = "open"
+    ACKNOWLEDGED = "acknowledged"
+    RESOLVED = "resolved"
+
+
 class UserRole(StrEnum):
     """Role assigned to a user."""
 

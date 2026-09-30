@@ -43,6 +43,10 @@ from ..schemas.user import UserResponse
 
 
 class AuthService:
+    """
+    Manage auth business operations.
+    """
+
     def __init__(
         self,
         session: AsyncSession,
