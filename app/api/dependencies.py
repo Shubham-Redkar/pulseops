@@ -149,7 +149,8 @@ def get_alert_service(
     """
     return AlertService(
         session=session,
-        repository=AlertRepository(session),
+        alert_repository=AlertRepository(session),
+        incident_repository=IncidentRepository(session),
     )
 
 
