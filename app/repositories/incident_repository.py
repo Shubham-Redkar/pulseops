@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.types import IncidentUpdateData
 from ..db.models.incident import Incident
+from ..schemas.enums import Environment, IncidentStatus
 
 
 class IncidentRepository:
@@ -65,3 +66,26 @@ class IncidentRepository:
         result = await self.session.execute(stmt)
 
         return result.scalar_one_or_none() is not None
+
+    async def get_open_by_service_and_environment(
+        self,
+        service_id: UUID,
+        environment: Environment,
+    ) -> Incident | None:
+        stmt = (
+            select(Incident)
+            .where(
+                Incident.service_id == service_id,
+                Incident.environment == environment,
+                Incident.status.in_(
+                    [
+                        IncidentStatus.OPEN,
+                        IncidentStatus.ACKNOWLEDGED,
+                    ]
+                ),
+            )
+            .order_by(Incident.created_at.desc())
+            .limit(1)
+        )
+
+        return await self.session.scalar(stmt)
