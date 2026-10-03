@@ -13,6 +13,7 @@ from ..db.models.user import User
 from ..repositories import (
     AlertRepository,
     EmailVerificationTokenRepository,
+    IdempotencyRepository,
     IncidentRepository,
     PasswordResetTokenRepository,
     RefreshTokenRepository,
@@ -151,6 +152,7 @@ def get_alert_service(
         session=session,
         alert_repository=AlertRepository(session),
         incident_repository=IncidentRepository(session),
+        idempotency_repository=IdempotencyRepository(session),
     )
 
 
