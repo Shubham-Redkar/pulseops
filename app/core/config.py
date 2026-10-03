@@ -43,6 +43,56 @@ class Settings(BaseSettings):
         le=10,
     )
 
+    alert_rate_limit: int = Field(
+        ge=100,
+        le=1000,
+    )
+
+    alert_rate_window: int = Field(
+        ge=60,
+        le=120,
+    )
+
+    login_rate_limit: int = Field(
+        ge=1,
+        le=10,
+    )
+
+    login_rate_window: int = Field(
+        ge=60,
+        le=120,
+    )
+
+    refresh_rate_limit: int = Field(
+        ge=1,
+        le=20,
+    )
+
+    refresh_rate_window: int = Field(
+        ge=60,
+        le=120,
+    )
+
+    forgot_password_rate_limit: int = Field(
+        ge=1,
+        le=6,
+    )
+
+    forgot_password_rate_window: int = Field(
+        ge=300,
+        le=600,
+    )
+
+    email_verification_rate_limit: int = Field(
+        ge=1,
+        le=20,
+    )
+
+    email_verification_rate_window: int = Field(
+        60,
+        le=600,
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

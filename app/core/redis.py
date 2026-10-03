@@ -47,3 +47,16 @@ class RedisStore:
         key: str,
     ) -> int:
         return await self.client.delete(key)
+
+    async def increment(
+        self,
+        key: str,
+        *,
+        ex: int | None = None,
+    ) -> int:
+        count = await self.client.incr(key)
+
+        if count == 1 and ex is not None:
+            await self.client.expire(key, ex)
+
+        return count

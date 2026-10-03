@@ -62,6 +62,18 @@ class InvalidTokenError(AppException):
         super().__init__(detail)
 
 
+class RateLimitExceededError(AppException):
+    """
+    Raised when a client exceeds the configured rate limit.
+    """
+
+    def __init__(
+        self,
+        detail: str = "Rate limit exceeded. Try again later.",
+    ) -> None:
+        super().__init__(detail)
+
+
 class UserNotFoundError(NotFoundError):
     """
     Raised when a user does not exist.

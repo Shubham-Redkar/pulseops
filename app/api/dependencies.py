@@ -194,6 +194,7 @@ AlertServiceDep = Annotated[
 
 def get_auth_service(
     session: SessionDep,
+    redis_store: RedisStoreDep,
 ) -> AuthService:
     """
     Provide an auth service with its database dependencies.
@@ -204,6 +205,7 @@ def get_auth_service(
         refresh_token_repository=RefreshTokenRepository(session),
         password_reset_token_repository=PasswordResetTokenRepository(session),
         email_verification_token_repository=EmailVerificationTokenRepository(session),
+        redis_store=redis_store,
     )
 
 

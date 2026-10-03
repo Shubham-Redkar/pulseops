@@ -2,11 +2,13 @@ from uuid import UUID
 
 from fastapi import APIRouter, Header, status
 
+from ...core.rate_limit import check_alert_rate_limit
 from ...schemas.alert import AlertResponse, CreateAlertRequest
 from ..dependencies import (
     AdminOrAnalystUserDep,
     AlertServiceDep,
     CurrentUserDep,
+    RedisStoreDep,
 )
 
 router = APIRouter(
@@ -21,9 +23,10 @@ router = APIRouter(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_alert(
-    _: AdminOrAnalystUserDep,
+    current_user: AdminOrAnalystUserDep,
     alert_data: CreateAlertRequest,
     alert_service: AlertServiceDep,
+    redis_store: RedisStoreDep,
     idempotency_key: str = Header(
         ...,
         alias="Idempotency-Key",
@@ -31,6 +34,11 @@ async def create_alert(
         max_length=255,
     ),
 ) -> AlertResponse:
+    await check_alert_rate_limit(
+        redis_store,
+        current_user.id,
+    )
+
     return await alert_service.create_alert(
         alert_data,
         idempotency_key,

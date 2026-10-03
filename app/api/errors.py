@@ -8,6 +8,7 @@ from ..core.exceptions import (
     ForbiddenError,
     InvalidTokenError,
     NotFoundError,
+    RateLimitExceededError,
     ServiceUnavailableError,
     UnauthorizedError,
 )
@@ -127,6 +128,18 @@ async def forbidden_error_handler(
     )
 
 
+async def rate_limit_exceeded_handler(
+    request: Request,
+    exc: Exception,
+) -> JSONResponse:
+    return create_error_response(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        code=ErrorCode.RATE_LIMIT_EXCEEDED,
+        message=str(exc),
+        request=request,
+    )
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     """Register application exception handlers."""
 
@@ -163,4 +176,9 @@ def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(
         ForbiddenError,
         forbidden_error_handler,
+    )
+
+    app.add_exception_handler(
+        RateLimitExceededError,
+        rate_limit_exceeded_handler,
     )
