@@ -13,6 +13,7 @@ from ...schemas.enums import Environment, IncidentSeverity
 from .base import Base
 
 if TYPE_CHECKING:
+    from .idempotency_key import IdempotencyKey
     from .incident import Incident
     from .service import Service
 
@@ -125,4 +126,9 @@ class Alert(Base):
 
     service: Mapped["Service"] = relationship(
         back_populates="alerts",
+    )
+
+    idempotency_key: Mapped["IdempotencyKey | None"] = relationship(
+        back_populates="alert",
+        uselist=False,
     )

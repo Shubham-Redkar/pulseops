@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Header, status
 
 from ...schemas.alert import AlertResponse, CreateAlertRequest
 from ..dependencies import (
@@ -24,8 +24,17 @@ async def create_alert(
     _: AdminOrAnalystUserDep,
     alert_data: CreateAlertRequest,
     alert_service: AlertServiceDep,
+    idempotency_key: str = Header(
+        ...,
+        alias="Idempotency-Key",
+        min_length=1,
+        max_length=255,
+    ),
 ) -> AlertResponse:
-    return await alert_service.create_alert(alert_data)
+    return await alert_service.create_alert(
+        alert_data,
+        idempotency_key,
+    )
 
 
 @router.get(

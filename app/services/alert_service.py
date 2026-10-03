@@ -4,8 +4,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.exceptions import AlertNotFoundError
 from ..core.fingerprinting import generate_alert_fingerprint
-from ..db.models import Alert, Incident
-from ..repositories import AlertRepository, IncidentRepository
+from ..db.models import Alert, IdempotencyKey, Incident
+from ..repositories import (
+    AlertRepository,
+    IdempotencyRepository,
+    IncidentRepository,
+)
 from ..schemas.alert import AlertResponse, CreateAlertRequest
 
 
@@ -19,14 +23,17 @@ class AlertService:
         session: AsyncSession,
         alert_repository: AlertRepository,
         incident_repository: IncidentRepository,
+        idempotency_repository: IdempotencyRepository,
     ) -> None:
         self.session = session
         self.alert_repository = alert_repository
         self.incident_repository = incident_repository
+        self.idempotency_repository = idempotency_repository
 
     async def create_alert(
         self,
         alert_data: CreateAlertRequest,
+        idempotency_key: str,
     ) -> AlertResponse:
         fingerprint = generate_alert_fingerprint(
             service_id=alert_data.service_id,
@@ -36,6 +43,18 @@ class AlertService:
         )
 
         async with self.session.begin():
+            existing_key = await self.idempotency_repository.get_by_key(
+                idempotency_key,
+            )
+
+            if existing_key is not None:
+                existing_alert = await self.alert_repository.get_by_id(
+                    existing_key.alert_id,
+                )
+
+                if existing_alert is not None:
+                    return AlertResponse.model_validate(existing_alert)
+
             existing_alert = await self.alert_repository.get_by_fingerprint(
                 fingerprint,
             )
@@ -69,6 +88,13 @@ class AlertService:
             )
 
             alert = await self.alert_repository.create(alert)
+
+            idempotency_record = IdempotencyKey(
+                key=idempotency_key,
+                alert_id=alert.id,
+            )
+
+            await self.idempotency_repository.create(idempotency_record)
 
         return AlertResponse.model_validate(alert)
 
