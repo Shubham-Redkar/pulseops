@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 from .api.errors import register_exception_handlers
 from .api.routes.router import api_router
+from .core.health import check_redis
 from .db.dependencies import check_database
 from .middleware.request_id import RequestIDMiddleware
 
@@ -38,6 +39,7 @@ async def liveness() -> dict[str, str]:
 @app.get("/health/ready", tags=["Health"])
 async def readiness() -> dict[str, str]:
     await check_database()
+    await check_redis()
 
     return {"status": "ready"}
 

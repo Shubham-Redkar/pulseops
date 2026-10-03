@@ -4,9 +4,11 @@ from uuid import UUID
 
 from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.exceptions import ForbiddenError, InvalidTokenError, UnauthorizedError
+from ..core.redis import RedisStore, redis_client
 from ..core.security import decode_and_validate_access_token
 from ..db.dependencies import get_db
 from ..db.models.user import User
@@ -35,6 +37,32 @@ SessionDep = Annotated[
     AsyncSession,
     Depends(get_db),
 ]
+
+
+def get_redis() -> Redis:
+    """
+    Provide the Redis client for a request.
+    """
+    return redis_client
+
+
+RedisDep = Annotated[
+    Redis,
+    Depends(get_redis),
+]
+
+
+def get_redis_store(
+    redis: RedisDep,
+) -> RedisStore:
+    return RedisStore(redis)
+
+
+RedisStoreDep = Annotated[
+    RedisStore,
+    Depends(get_redis_store),
+]
+
 
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="/api/v1/auth/login",
@@ -126,6 +154,7 @@ UserServiceDep = Annotated[
 
 def get_incident_service(
     session: SessionDep,
+    redis_store: RedisStoreDep,
 ) -> IncidentService:
     """
     Provide an incident service with its database dependencies.
@@ -133,6 +162,7 @@ def get_incident_service(
     return IncidentService(
         session=session,
         repository=IncidentRepository(session),
+        redis_store=redis_store,
     )
 
 
