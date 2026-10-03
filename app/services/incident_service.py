@@ -4,6 +4,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.exceptions import IncidentNotFoundError
+from ..core.redis import RedisStore
 from ..core.types import IncidentUpdateData
 from ..db.models.incident import Incident
 from ..repositories.incident_repository import IncidentRepository
@@ -24,9 +25,11 @@ class IncidentService:
         self,
         session: AsyncSession,
         repository: IncidentRepository,
+        redis_store: RedisStore,
     ) -> None:
         self.session = session
         self.repository = repository
+        self.redis_store = redis_store
 
     async def create_incident(
         self,
@@ -45,10 +48,25 @@ class IncidentService:
         self,
         incident_id: UUID,
     ) -> IncidentResponse:
+        cache_key = f"incident:{incident_id}"
+
+        cached_incident = await self.redis_store.get(cache_key)
+
+        if cached_incident is not None:
+            return IncidentResponse.model_validate_json(cached_incident)
+
         if (incident := await self.repository.get_by_id(incident_id)) is None:
             raise IncidentNotFoundError(incident_id)
 
-        return IncidentResponse.model_validate(incident)
+        response = IncidentResponse.model_validate(incident)
+
+        await self.redis_store.set(
+            cache_key,
+            response.model_dump_json(),
+            ex=300,
+        )
+
+        return response
 
     async def get_incidents(
         self,
@@ -86,6 +104,10 @@ class IncidentService:
             ) is None:
                 raise IncidentNotFoundError(incident_id)
 
+        await self.redis_store.delete(
+            f"incident:{incident_id}",
+        )
+
         return IncidentResponse.model_validate(incident)
 
     async def delete_incident(
@@ -97,3 +119,7 @@ class IncidentService:
 
             if not deleted:
                 raise IncidentNotFoundError(incident_id)
+
+        await self.redis_store.delete(
+            f"incident:{incident_id}",
+        )

@@ -7,6 +7,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     database_url: str
 
+    redis_url: str
+
     secret_key: SecretStr = Field(min_length=32)
 
     jwt_algorithm: Literal["HS256", "HS384", "HS512"]
@@ -53,6 +55,13 @@ class Settings(BaseSettings):
     def validate_database_url(cls, value: str) -> str:
         if not value.strip():
             raise ValueError("DATABASE_URL must not be empty.")
+        return value
+
+    @field_validator("redis_url")
+    @classmethod
+    def validate_redis_url(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("REDIS_URL must not be empty.")
         return value
 
 
