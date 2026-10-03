@@ -5,6 +5,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.config import settings
 from ..core.exceptions import ConflictError, UnauthorizedError
+from ..core.rate_limit import (
+    check_forgot_password_rate_limit,
+    check_login_ip_rate_limit,
+    check_login_username_rate_limit,
+    check_password_reset_rate_limit,
+    check_refresh_rate_limit,
+    check_verify_email_rate_limit,
+)
+from ..core.redis import RedisStore
 from ..core.security import (
     create_access_token,
     generate_email_verification_token,
@@ -54,12 +63,14 @@ class AuthService:
         refresh_token_repository: RefreshTokenRepository,
         password_reset_token_repository: PasswordResetTokenRepository,
         email_verification_token_repository: EmailVerificationTokenRepository,
+        redis_store: RedisStore,
     ) -> None:
         self.session = session
         self.user_repository = user_repository
         self.refresh_token_repository = refresh_token_repository
         self.password_reset_token_repository = password_reset_token_repository
         self.email_verification_token_repository = email_verification_token_repository
+        self.redis_store = redis_store
 
     async def register(
         self,
@@ -133,7 +144,18 @@ class AuthService:
     async def login(
         self,
         data: LoginRequest,
+        client_ip: str,
     ) -> TokenResponse:
+        await check_login_ip_rate_limit(
+            self.redis_store,
+            client_ip,
+        )
+
+        await check_login_username_rate_limit(
+            self.redis_store,
+            str(data.username),
+        )
+
         user = await self.user_repository.get_by_username(str(data.username))
 
         if not user:
@@ -197,7 +219,16 @@ class AuthService:
             refresh_expires_in=settings.refresh_token_expire_days * 24 * 60 * 60,
         )
 
-    async def refresh(self, data: RefreshTokenRequest) -> TokenResponse:
+    async def refresh(
+        self,
+        data: RefreshTokenRequest,
+        client_ip: str,
+    ) -> TokenResponse:
+        await check_refresh_rate_limit(
+            self.redis_store,
+            client_ip,
+        )
+
         raw_refresh_token = data.refresh_token.get_secret_value()
 
         token_hash = hash_refresh_token(raw_refresh_token)
@@ -296,7 +327,13 @@ class AuthService:
     async def forgot_password(
         self,
         data: ForgotPasswordRequest,
+        client_ip: str,
     ) -> None:
+        await check_forgot_password_rate_limit(
+            self.redis_store,
+            client_ip,
+        )
+
         user = await self.user_repository.get_by_email(data.email)
 
         if not user:
@@ -326,7 +363,12 @@ class AuthService:
     async def reset_password(
         self,
         data: ResetPasswordRequest,
+        client_ip: str,
     ) -> None:
+        await check_password_reset_rate_limit(
+            self.redis_store,
+            client_ip,
+        )
 
         raw_token = data.reset_token.get_secret_value()
 
@@ -368,7 +410,13 @@ class AuthService:
     async def verify_email(
         self,
         data: VerifyEmailRequest,
+        client_ip: str,
     ) -> None:
+        await check_verify_email_rate_limit(
+            self.redis_store,
+            client_ip,
+        )
+
         raw_token = data.token.get_secret_value()
 
         token_hash = hash_email_verification_token(raw_token)

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Request, status
 
 from ...schemas.auth import (
     ChangePasswordRequest,
@@ -42,10 +42,16 @@ async def register(
     status_code=status.HTTP_200_OK,
 )
 async def login(
+    request: Request,
     data: LoginRequest,
     auth_service: AuthServiceDep,
 ) -> TokenResponse:
-    return await auth_service.login(data)
+    client_ip = request.client.host if request.client else "unknown"
+
+    return await auth_service.login(
+        data,
+        client_ip,
+    )
 
 
 @router.post(
@@ -54,10 +60,16 @@ async def login(
     status_code=status.HTTP_200_OK,
 )
 async def refresh(
+    request: Request,
     data: RefreshTokenRequest,
     auth_service: AuthServiceDep,
 ) -> TokenResponse:
-    return await auth_service.refresh(data)
+    client_ip = request.client.host if request.client else "unknown"
+
+    return await auth_service.refresh(
+        data,
+        client_ip,
+    )
 
 
 @router.post(
@@ -88,10 +100,16 @@ async def change_password(
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def forgot_password(
+    request: Request,
     data: ForgotPasswordRequest,
     auth_service: AuthServiceDep,
 ) -> None:
-    await auth_service.forgot_password(data)
+    client_ip = request.client.host if request.client else "unknown"
+
+    await auth_service.forgot_password(
+        data,
+        client_ip,
+    )
 
 
 @router.post(
@@ -99,15 +117,27 @@ async def forgot_password(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def reset_password(
+    request: Request,
     data: ResetPasswordRequest,
     auth_service: AuthServiceDep,
 ) -> None:
-    await auth_service.reset_password(data)
+    client_ip = request.client.host if request.client else "unknown"
+
+    await auth_service.reset_password(
+        data,
+        client_ip,
+    )
 
 
 @router.post("/verify-email")
 async def verify_email(
+    request: Request,
     data: VerifyEmailRequest,
     auth_service: AuthServiceDep,
 ) -> None:
-    await auth_service.verify_email(data)
+    client_ip = request.client.host if request.client else "unknown"
+
+    await auth_service.verify_email(
+        data,
+        client_ip,
+    )
