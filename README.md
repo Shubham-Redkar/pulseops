@@ -512,9 +512,19 @@ External Monitoring System
 - [x] Exhaustive authentication and RBAC tests
 
 ### Phase 3 — Alert Ingestion
-- [ ] Alert ingestion endpoint & validation
-- [ ] Alert persistence & fingerprinting
-- [ ] Deduplication & incident correlation
+Alert endpoint implemented
+- [x] Alert validation implemented
+- [x] Alert persistence implemented
+- [x] Alert fingerprinting implemented
+- [x] Fingerprint uniqueness enforced
+- [x] Fingerprint deduplication implemented
+- [x] Idempotency-Key support implemented
+- [x] Idempotency persistence implemented
+- [x] Incident correlation implemented
+- [x] Automatic incident creation implemented
+- [x] Alert-to-incident association implemented
+- [x] RBAC implemented
+- [x] Tests passing
 
 ### Phase 4 — Redis
 - [ ] Redis integration
@@ -618,12 +628,14 @@ Coverage focuses on: authentication flows, password validation, email verificati
 
 ## Project Status
 
-**Status: Phase 2 — Authentication & Authorization Complete**
+**Status: Phase 3 — Alert Ingestion Complete**
 
 Phase 1 foundation is complete, including the FastAPI application, PostgreSQL integration, SQLAlchemy models, Alembic migrations, Docker and Docker Compose, CRUD APIs for Users, Teams, Services, and Incidents, Pydantic validation, global error handling, request ID middleware, repository/service architecture, database-backed CRUD operations, pagination, and API integration tests.
 
-Phase 2 authentication and authorization has been implemented, including JWT authentication, OAuth2 password flow, password hashing, user registration and login, email verification, password reset, password change, account activation/deactivation, account-level login lockout, refresh-token rotation and revocation, protected endpoints, and RBAC.
+Phase 2 authentication and authorization is complete, including JWT authentication, OAuth2 password flow, password hashing, user registration and login, email verification, password reset, password change, account activation/deactivation, account-level login lockout, refresh-token rotation and revocation, protected endpoints, and RBAC.
 
-Phase 2 authentication test coverage is complete.
+Phase 3 alert ingestion is complete, including alert validation and persistence, deterministic fingerprinting, fingerprint-based deduplication, PostgreSQL-backed `Idempotency-Key` handling, automatic incident correlation, automatic incident creation when no open incident exists, alert-to-incident association, and RBAC-protected alert endpoints.
 
-The project is now ready to begin **Phase 3 — Alert Ingestion**. Database integration test coverage continues to be expanded.
+The complete test suite currently passes with **227 tests passing**.
+
+The project is now ready to begin **Phase 4**.
