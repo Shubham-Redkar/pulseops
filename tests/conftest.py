@@ -1,7 +1,9 @@
 from collections.abc import AsyncGenerator
+from typing import Literal
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
@@ -17,6 +19,10 @@ from app.main import app
 
 class TestSettings(BaseSettings):
     database_url: str
+
+    secret_key: SecretStr = Field(min_length=32)
+
+    jwt_algorithm: Literal["HS256", "HS384", "HS512"]
 
     model_config = SettingsConfigDict(
         env_file=".env.test",
@@ -63,7 +69,9 @@ async def reset_database() -> AsyncGenerator[None]:
                     incidents,
                     services,
                     users,
-                    teams
+                    teams,
+                    alerts,
+                    idempotency_keys
                 CASCADE
                 """
             )

@@ -174,3 +174,33 @@ async def test_delete_expired_or_revoked(
     assert await refresh_token_repository.get_by_hash(expired_token.token_hash) is None
     assert await refresh_token_repository.get_by_hash(revoked_token.token_hash) is None
     assert await refresh_token_repository.get_by_hash(expired_and_revoked_token.token_hash) is None
+
+
+@pytest.mark.asyncio
+async def test_revoke_all_for_user(
+    test_session: AsyncSession,
+    refresh_token_repository: RefreshTokenRepository,
+):
+    user = await create_test_user(test_session)
+    now = datetime.now(UTC)
+
+    token1 = RefreshToken(
+        user_id=user.id,
+        token_hash=f"t1-{uuid4()}",
+        expires_at=now + timedelta(days=1),
+        revoked_at=None,
+    )
+    token2 = RefreshToken(
+        user_id=user.id,
+        token_hash=f"t2-{uuid4()}",
+        expires_at=now + timedelta(days=1),
+        revoked_at=None,
+    )
+
+    test_session.add_all([token1, token2])
+    await test_session.flush()
+
+    await refresh_token_repository.revoke_all_for_user(user.id)
+
+    assert token1.revoked_at is not None
+    assert token2.revoked_at is not None
