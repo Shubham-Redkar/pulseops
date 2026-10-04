@@ -10,7 +10,7 @@ class Settings(BaseSettings):
         "testing",
         "staging",
         "production",
-    ] = "development"
+    ]
 
     database_url: str
 
@@ -129,6 +129,27 @@ class Settings(BaseSettings):
             raise ValueError("URL setting must not be empty.")
 
         return value
+
+    @field_validator("redis_key_prefix")
+    @classmethod
+    def validate_redis_key_prefix(cls, value: str) -> str:
+        value = value.strip().strip(":")
+
+        if not value:
+            raise ValueError(
+                "redis_key_prefix must not be empty.",
+            )
+
+        if ":" in value:
+            raise ValueError(
+                "redis_key_prefix must not contain ':'.",
+            )
+
+        return value
+
+    @property
+    def redis_prefix(self) -> str:
+        return f"{self.redis_key_prefix}:{self.environment}"
 
 
 settings = Settings()  # pyright: ignore[reportCallIssue]
