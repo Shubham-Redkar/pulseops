@@ -2,7 +2,9 @@ from enum import StrEnum
 
 
 class IncidentSeverity(StrEnum):
-    """Severity of an incident."""
+    """
+    Severity of an incident.
+    """
 
     LOW = "low"
     MEDIUM = "medium"
@@ -11,7 +13,9 @@ class IncidentSeverity(StrEnum):
 
 
 class Environment(StrEnum):
-    """Deployment environment where the incident occurred."""
+    """
+    Deployment environment where the incident occurred.
+    """
 
     DEVELOPMENT = "development"
     STAGING = "staging"
@@ -19,7 +23,9 @@ class Environment(StrEnum):
 
 
 class IncidentStatus(StrEnum):
-    """Current lifecycle state of an incident."""
+    """
+    Current lifecycle state of an incident.
+    """
 
     OPEN = "open"
     ACKNOWLEDGED = "acknowledged"
@@ -27,7 +33,9 @@ class IncidentStatus(StrEnum):
 
 
 class UserRole(StrEnum):
-    """Role assigned to a user."""
+    """
+    Role assigned to a user.
+    """
 
     ADMIN = "admin"
     ANALYST = "analyst"
