@@ -53,9 +53,13 @@ class RedisStore:
         self._client = client
 
     async def get(self, key: str) -> str | None:
-        value = await self._client.get(key)
+        try:
+            value = await self._client.get(key)
 
-        return cast(str | None, value)
+            return cast(str | None, value)
+
+        except RedisError:
+            return None
 
     async def set(
         self,
@@ -65,22 +69,27 @@ class RedisStore:
         ex: int | None = None,
     ) -> bool:
         self._validate_expiry(ex)
+        try:
+            result = await self._client.set(
+                key,
+                value,
+                ex=ex,
+            )
 
-        result = await self._client.set(
-            key,
-            value,
-            ex=ex,
-        )
+            return bool(result)
 
-        return bool(result)
+        except RedisError:
+            return False
 
     async def delete(
         self,
         key: str,
     ) -> bool:
-        deleted = await self._client.delete(key)
-
-        return bool(deleted)
+        try:
+            deleted = await self._client.delete(key)
+            return bool(deleted)
+        except RedisError:
+            return False
 
     async def increment(
         self,
@@ -90,17 +99,23 @@ class RedisStore:
     ) -> int:
         self._validate_expiry(ex)
 
-        if ex is None:
-            return int(await self._client.incr(key))
+        try:
+            if ex is None:
+                return int(await self._client.incr(key))
 
-        result = await self._client.eval(
-            self._INCREMENT_WITH_EXPIRY_SCRIPT,
-            1,
-            key,
-            ex,
-        )
+            result = await self._client.eval(
+                self._INCREMENT_WITH_EXPIRY_SCRIPT,
+                1,
+                key,
+                ex,
+            )
 
-        return int(result)
+            return int(result)
+
+        except RedisError as exc:
+            raise ServiceUnavailableError(
+                "Redis is not available.",
+            ) from exc
 
     async def acquire_lock(
         self,
@@ -111,28 +126,38 @@ class RedisStore:
     ) -> bool:
         self._validate_expiry(ex)
 
-        result = await self._client.set(
-            key,
-            token,
-            nx=True,
-            ex=ex,
-        )
+        try:
+            result = await self._client.set(
+                key,
+                token,
+                nx=True,
+                ex=ex,
+            )
 
-        return bool(result)
+            return bool(result)
+
+        except RedisError as exc:
+            raise ServiceUnavailableError(
+                "Redis is not available.",
+            ) from exc
 
     async def release_lock(
         self,
         key: str,
         token: str,
     ) -> bool:
-        result = await self._client.eval(
-            self._RELEASE_LOCK_SCRIPT,
-            1,
-            key,
-            token,
-        )
+        try:
+            result = await self._client.eval(
+                self._RELEASE_LOCK_SCRIPT,
+                1,
+                key,
+                token,
+            )
 
-        return bool(result)
+            return bool(result)
+
+        except RedisError:
+            return False
 
     async def ping(self) -> bool:
         try:

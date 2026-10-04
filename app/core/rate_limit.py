@@ -34,7 +34,7 @@ async def check_alert_rate_limit(
 ) -> None:
     await _check_rate_limit(
         redis_store,
-        key=f"rate_limiter:alerts:{user_id}",
+        key=f"{settings.redis_key_prefix}:rate_limiter:alerts:{user_id}",
         limit=settings.alert_rate_limit,
         window=settings.alert_rate_window,
     )
@@ -48,7 +48,7 @@ async def check_login_ip_rate_limit(
 
     await _check_rate_limit(
         redis_store,
-        key=f"rate_limiter:login:ip:{identifier}",
+        key=f"{settings.redis_key_prefix}:rate_limiter:login:ip:{identifier}",
         limit=settings.login_rate_limit,
         window=settings.login_rate_window,
     )
@@ -64,7 +64,7 @@ async def check_login_username_rate_limit(
 
     await _check_rate_limit(
         redis_store,
-        key=f"rate_limiter:login:username:{identifier}",
+        key=f"{settings.redis_key_prefix}:rate_limiter:login:username:{identifier}",
         limit=settings.login_rate_limit,
         window=settings.login_rate_window,
     )
@@ -78,7 +78,7 @@ async def check_refresh_rate_limit(
 
     await _check_rate_limit(
         redis_store,
-        key=f"rate_limiter:refresh:{identifier_hash}",
+        key=f"{settings.redis_key_prefix}:rate_limiter:refresh:{identifier_hash}",
         limit=settings.refresh_rate_limit,
         window=settings.refresh_rate_window,
     )
@@ -92,7 +92,7 @@ async def check_forgot_password_rate_limit(
 
     await _check_rate_limit(
         redis_store,
-        key=f"rate_limiter:forgot_password:{identifier_hash}",
+        key=f"{settings.redis_key_prefix}:rate_limiter:forgot_password:{identifier_hash}",
         limit=settings.forgot_password_rate_limit,
         window=settings.forgot_password_rate_window,
     )
@@ -106,7 +106,7 @@ async def check_password_reset_rate_limit(
 
     await _check_rate_limit(
         redis_store,
-        key=f"rate_limiter:reset_password:{identifier_hash}",
+        key=f"{settings.redis_key_prefix}:rate_limiter:reset_password:{identifier_hash}",
         limit=settings.forgot_password_rate_limit,
         window=settings.forgot_password_rate_window,
     )
@@ -120,7 +120,7 @@ async def check_verify_email_rate_limit(
 
     await _check_rate_limit(
         redis_store,
-        key=f"rate_limiter:verify_email:{identifier_hash}",
+        key=f"{settings.redis_key_prefix}:rate_limiter:verify_email:{identifier_hash}",
         limit=settings.email_verification_rate_limit,
         window=settings.email_verification_rate_window,
     )

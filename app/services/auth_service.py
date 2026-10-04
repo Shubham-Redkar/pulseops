@@ -1,4 +1,5 @@
 from datetime import UTC, datetime, timedelta
+from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -101,43 +102,36 @@ class AuthService:
         )
 
         try:
-            user = await self.user_repository.create(user)
+            async with self.session.begin():
+                user = await self.user_repository.create(user)
 
-            raw_token = generate_email_verification_token()
+                raw_token = generate_email_verification_token()
 
-            print(f"EMAIL VERIFICATION TOKEN: {raw_token}")
+                token_hash = hash_email_verification_token(raw_token)
 
-            token_hash = hash_email_verification_token(raw_token)
+                now = datetime.now(UTC)
 
-            now = datetime.now(UTC)
+                verification_token = EmailVerificationToken(
+                    user_id=user.id,
+                    token_hash=token_hash,
+                    expires_at=now
+                    + timedelta(minutes=settings.email_verification_token_expire_minutes),
+                    used_at=None,
+                )
 
-            verification_token = EmailVerificationToken(
-                user_id=user.id,
-                token_hash=token_hash,
-                expires_at=now
-                + timedelta(minutes=settings.email_verification_token_expire_minutes),
-                used_at=None,
-            )
-
-            await self.email_verification_token_repository.create(
-                verification_token,
-            )
-
-            await self.session.commit()
-            await self.session.refresh(user)
-
+                await self.email_verification_token_repository.create(
+                    verification_token,
+                )
         except IntegrityError as exc:
-            await self.session.rollback()
-
-            error = str(exc.orig)
-
-            if "ix_users_username" in error:
+            if "ix_users_username" in str(exc.orig):
                 raise ConflictError("Username already exists.") from exc
 
-            if "ix_users_email" in error:
+            if "ix_users_email" in str(exc.orig):
                 raise ConflictError("Email already exists.") from exc
 
             raise
+
+        await self.session.refresh(user)
 
         return UserResponse.model_validate(user)
 
@@ -156,60 +150,71 @@ class AuthService:
             str(data.username),
         )
 
-        user = await self.user_repository.get_by_username(str(data.username))
+        username = str(data.username)
+        login_failed = False
+        user_id: UUID | None = None
 
-        if not user:
+        async with self.session.begin():
+            user = await self.user_repository.get_by_username_for_update(
+                username,
+            )
+
+            if not user:
+                login_failed = True
+            elif not user.is_active:
+                raise UnauthorizedError("User account is inactive.")
+            else:
+                now = datetime.now(UTC)
+
+                if user.locked_until is not None:
+                    if user.locked_until > now:
+                        raise UnauthorizedError("Account is temporarily locked.")
+
+                    user.locked_until = None
+                    user.failed_login_attempts = 0
+
+                if not verify_password(
+                    data.password.get_secret_value(),
+                    user.password_hash,
+                ):
+                    user.failed_login_attempts += 1
+
+                    if user.failed_login_attempts >= settings.account_login_attempts:
+                        user.locked_until = now + timedelta(
+                            minutes=settings.account_lockout_minutes,
+                        )
+
+                    login_failed = True
+                elif not user.email_verified:
+                    raise UnauthorizedError("Email address is not verified.")
+                else:
+                    user.failed_login_attempts = 0
+                    user.locked_until = None
+                    user_id = user.id
+
+        if login_failed or user_id is None:
             raise UnauthorizedError("Invalid username or password.")
 
-        if not user.is_active:
-            raise UnauthorizedError("User account is inactive.")
-
-        now = datetime.now(UTC)
-
-        if user.locked_until is not None:
-            if user.locked_until > now:
-                raise UnauthorizedError("Account is temporarily locked.")
-
-            user.locked_until = None
-            user.failed_login_attempts = 0
-
-        if not verify_password(
-            data.password.get_secret_value(),
-            user.password_hash,
-        ):
-            user.failed_login_attempts += 1
-
-            if user.failed_login_attempts >= settings.account_login_attempts:
-                user.locked_until = now + timedelta(minutes=settings.account_lockout_minutes)
-
-            await self.session.commit()
-
-            raise UnauthorizedError("Invalid username or password.")
-
-        if not user.email_verified:
-            raise UnauthorizedError("Email address is not verified.")
-
-        user.failed_login_attempts = 0
-        user.locked_until = None
-
-        access_token = create_access_token(str(user.id))
+        access_token = create_access_token(str(user_id))
 
         refresh_token = generate_refresh_token()
-
         refresh_token_hash = hash_refresh_token(refresh_token)
 
         refresh_token_record = RefreshToken(
-            user_id=user.id,
+            user_id=user_id,
             token_hash=refresh_token_hash,
             expires_at=datetime.now(UTC) + timedelta(days=settings.refresh_token_expire_days),
         )
 
         try:
-            await self.refresh_token_repository.create(refresh_token=refresh_token_record)
-            await self.session.commit()
+            async with self.session.begin():
+                await self.refresh_token_repository.create(
+                    refresh_token=refresh_token_record,
+                )
         except IntegrityError as exc:
-            await self.session.rollback()
-            raise ConflictError("Unable to create refresh token.") from exc
+            raise ConflictError(
+                "Unable to create refresh token.",
+            ) from exc
 
         return TokenResponse(
             access_token=access_token,
@@ -251,6 +256,9 @@ class AuthService:
         if not user:
             raise UnauthorizedError("Invalid refresh token.")
 
+        if not user.is_active:
+            raise UnauthorizedError("User account is inactive.")
+
         access_token = create_access_token(str(user.id))
 
         new_refresh_token = generate_refresh_token()
@@ -263,14 +271,18 @@ class AuthService:
         )
 
         try:
-            await self.refresh_token_repository.revoke(refresh_token_record)
+            async with self.session.begin():
+                await self.refresh_token_repository.revoke(
+                    refresh_token_record,
+                )
 
-            await self.refresh_token_repository.create(refresh_token=new_refresh_token_record)
-
-            await self.session.commit()
+                await self.refresh_token_repository.create(
+                    new_refresh_token_record,
+                )
         except IntegrityError as exc:
-            await self.session.rollback()
-            raise ConflictError("Unable to rotate refresh token.") from exc
+            raise ConflictError(
+                "Unable to create refresh token.",
+            ) from exc
 
         return TokenResponse(
             access_token=access_token,
@@ -298,8 +310,8 @@ class AuthService:
         if refresh_token_record.expires_at <= now:
             raise UnauthorizedError("Refresh token has expired.")
 
-        await self.refresh_token_repository.revoke(refresh_token_record)
-        await self.session.commit()
+        async with self.session.begin():
+            await self.refresh_token_repository.revoke(refresh_token_record)
 
     async def change_password(
         self,
@@ -318,11 +330,14 @@ class AuthService:
         ):
             raise ConflictError("New password must be different from the current password.")
 
-        current_user.password_hash = hash_password(data.new_password.get_secret_value())
+        async with self.session.begin():
+            current_user.password_hash = hash_password(
+                data.new_password.get_secret_value(),
+            )
 
-        await self.refresh_token_repository.revoke_all_for_user(current_user.id)
-
-        await self.session.commit()
+            await self.refresh_token_repository.revoke_all_for_user(
+                current_user.id,
+            )
 
     async def forgot_password(
         self,
@@ -353,12 +368,13 @@ class AuthService:
         )
 
         try:
-            await self.password_reset_token_repository.invalidate_unused_for_user(user.id)
-            await self.password_reset_token_repository.create(reset_token)
-            await self.session.commit()
+            async with self.session.begin():
+                await self.password_reset_token_repository.invalidate_unused_for_user(user.id)
+                await self.password_reset_token_repository.create(reset_token)
         except IntegrityError as exc:
-            await self.session.rollback()
-            raise ConflictError("Unable to create password reset token.") from exc
+            raise ConflictError(
+                "Unable to create password reset token.",
+            ) from exc
 
     async def reset_password(
         self,
@@ -388,24 +404,28 @@ class AuthService:
         if not user:
             raise UnauthorizedError("Invalid or expired password reset token.")
 
+        if not user.is_active:
+            raise UnauthorizedError("User account is inactive.")
+
         if verify_password(
             data.new_password.get_secret_value(),
             user.password_hash,
         ):
             raise ConflictError("New password must be different from the current password.")
 
-        user.password_hash = hash_password(data.new_password.get_secret_value())
-
-        reset_token.used_at = now
-
-        await self.refresh_token_repository.revoke_all_for_user(user.id)
-
         try:
-            await self.session.commit()
+            async with self.session.begin():
+                user.password_hash = hash_password(
+                    data.new_password.get_secret_value(),
+                )
 
+                reset_token.used_at = now
+
+                await self.refresh_token_repository.revoke_all_for_user(user.id)
         except IntegrityError as exc:
-            await self.session.rollback()
-            raise ConflictError("Unable to reset password.") from exc
+            raise ConflictError(
+                "Unable to reset password.",
+            ) from exc
 
     async def verify_email(
         self,
@@ -444,11 +464,11 @@ class AuthService:
         if user.email_verified:
             raise ConflictError("Email is already verified.")
 
-        user.email_verified = True
-        verification_token.used_at = now
-
         try:
-            await self.session.commit()
+            async with self.session.begin():
+                user.email_verified = True
+                verification_token.used_at = now
         except IntegrityError as exc:
-            await self.session.rollback()
-            raise ConflictError("Unable to verify email.") from exc
+            raise ConflictError(
+                "Unable to verify email.",
+            ) from exc
