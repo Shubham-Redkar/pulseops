@@ -17,7 +17,7 @@ class EmailVerificationToken(Base):
     Database model representing a token used to verify a user's email address.
     """
 
-    __tablename__ = "email_verification_token"
+    __tablename__ = "email_verification_tokens"
 
     id: Mapped[UUID] = mapped_column(
         PDUUID(as_uuid=True),

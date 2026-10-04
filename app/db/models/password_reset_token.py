@@ -17,7 +17,7 @@ class PasswordResetToken(Base):
     Represents a short-lived, single-use token used to reset a user's password.
     """
 
-    __tablename__ = "password_reset_token"
+    __tablename__ = "password_reset_tokens"
 
     id: Mapped[UUID] = mapped_column(
         PDUUID(as_uuid=True),
