@@ -12,14 +12,12 @@ class IncidentBase(BaseModel):
     """
 
     title: CleanString = Field(
-        min_length=1,
         max_length=255,
         description="Short title describing the incident.",
         examples=["Payment API error rate elevated"],
     )
 
     description: CleanString = Field(
-        min_length=1,
         max_length=5000,
         description="Detailed description of what is happening.",
         examples=["Error rate exceeded the production threshold."],
@@ -81,7 +79,6 @@ class UpdateIncidentRequest(BaseModel):
 
     title: CleanString | None = Field(
         default=None,
-        min_length=1,
         max_length=255,
         description="Short title describing the incident.",
         examples=["Payment API error rate elevated"],
@@ -89,7 +86,6 @@ class UpdateIncidentRequest(BaseModel):
 
     description: CleanString | None = Field(
         default=None,
-        min_length=1,
         max_length=5000,
         description="Detailed description of what is happening.",
         examples=["Error rate exceeded the production threshold."],

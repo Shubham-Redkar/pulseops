@@ -1,11 +1,26 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from .base import CleanString, IDMixin, ORMBaseSchema, TimestampMixin
 from .enums import Environment, IncidentSeverity
+
+AlertSource = Annotated[
+    CleanString,
+    StringConstraints(
+        max_length=255,
+    ),
+]
+
+AlertMetric = Annotated[
+    CleanString,
+    StringConstraints(
+        max_length=255,
+    ),
+]
 
 
 class CreateAlertRequest(BaseModel):
@@ -44,16 +59,12 @@ class CreateAlertRequest(BaseModel):
         examples=["critical"],
     )
 
-    source: CleanString = Field(
-        min_length=1,
-        max_length=255,
+    source: AlertSource = Field(
         description="Monitoring or alerting system that generated the alert.",
         examples=["prometheus"],
     )
 
-    metric: CleanString = Field(
-        min_length=1,
-        max_length=255,
+    metric: AlertMetric = Field(
         description="Metric that triggered the alert.",
         examples=["error_rate"],
     )
@@ -104,12 +115,12 @@ class AlertResponse(
         examples=["critical"],
     )
 
-    source: CleanString = Field(
+    source: AlertSource = Field(
         description="Monitoring or alerting system that generated the alert.",
         examples=["prometheus"],
     )
 
-    metric: CleanString = Field(
+    metric: AlertMetric = Field(
         description="Metric that triggered the alert.",
         examples=["error_rate"],
     )

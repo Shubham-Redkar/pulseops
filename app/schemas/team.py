@@ -9,7 +9,6 @@ class TeamBase(BaseModel):
     """
 
     name: CleanString = Field(
-        min_length=1,
         max_length=255,
         description="Name of the team.",
         examples=["Payments Team"],
@@ -62,7 +61,6 @@ class UpdateTeamRequest(BaseModel):
 
     name: CleanString | None = Field(
         default=None,
-        min_length=1,
         max_length=255,
         description="Name of the team.",
         examples=["Payments Team"],

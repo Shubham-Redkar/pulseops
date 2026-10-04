@@ -100,7 +100,6 @@ class UpdateUserRequest(BaseModel):
 
     first_name: CleanString | None = Field(
         default=None,
-        min_length=1,
         max_length=100,
         description="First name of the user.",
         examples=["John"],
@@ -108,7 +107,6 @@ class UpdateUserRequest(BaseModel):
 
     last_name: CleanString | None = Field(
         default=None,
-        min_length=1,
         max_length=100,
         description="Last name of the user.",
         examples=["Doe"],

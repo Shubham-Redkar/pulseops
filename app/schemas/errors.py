@@ -11,8 +11,7 @@ class ErrorDetail(BaseModel):
     Individual validation error detail.
     """
 
-    field: str = Field(
-        min_length=1,
+    field: CleanString = Field(
         max_length=255,
         description="Field associated with the error.",
         examples=["email"],
