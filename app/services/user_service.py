@@ -42,7 +42,6 @@ class UserService:
         self,
         user_data: CreateUserRequest,
     ) -> UserResponse:
-
         user = User(
             first_name=user_data.first_name,
             last_name=user_data.last_name,
@@ -60,16 +59,22 @@ class UserService:
             error = str(exc.orig)
 
             if "ix_users_username" in error:
-                raise ConflictError("A user with this username already exists.") from exc
+                raise ConflictError(
+                    "A user with this username already exists.",
+                ) from exc
 
             if "ix_users_email" in error:
-                raise ConflictError("A user with this email already exists.") from exc
-
+                raise ConflictError(
+                    "A user with this email already exists.",
+                ) from exc
             raise
 
         return UserResponse.model_validate(user)
 
-    async def get_user(self, user_id: UUID) -> UserResponse:
+    async def get_user(
+        self,
+        user_id: UUID,
+    ) -> UserResponse:
         if (user := await self.user_repository.get_by_id(user_id)) is None:
             raise UserNotFoundError(user_id)
 
@@ -101,14 +106,29 @@ class UserService:
             UserUpdateData,
             user_data.model_dump(exclude_unset=True),
         )
-        async with self.session.begin():
-            if (
-                user := await self.user_repository.update(
-                    user_id,
-                    update_data,
-                )
-            ) is None:
-                raise UserNotFoundError(user_id)
+
+        try:
+            async with self.session.begin():
+                if (
+                    user := await self.user_repository.update(
+                        user_id,
+                        update_data,
+                    )
+                ) is None:
+                    raise UserNotFoundError(user_id)
+        except IntegrityError as exc:
+            error = str(exc.orig)
+
+            if "ix_users_username" in error:
+                raise ConflictError(
+                    "A user with this username already exists.",
+                ) from exc
+
+            if "ix_users_email" in error:
+                raise ConflictError(
+                    "A user with this email already exists.",
+                ) from exc
+            raise
 
         return UserResponse.model_validate(user)
 
@@ -132,12 +152,15 @@ class UserService:
         if user.is_active == is_active:
             return UserResponse.model_validate(user)
 
-        user.is_active = is_active
+        try:
+            async with self.session.begin():
+                user.is_active = is_active
 
-        if not is_active:
-            await self.refresh_token_repository.revoke_all_for_user(user.id)
-
-        await self.session.commit()
-        await self.session.refresh(user)
+                if not is_active:
+                    await self.refresh_token_repository.revoke_all_for_user(user.id)
+        except IntegrityError as exc:
+            raise ConflictError(
+                "Unable to update user status.",
+            ) from exc
 
         return UserResponse.model_validate(user)

@@ -17,11 +17,18 @@ class TeamService:
     Manage team business operations.
     """
 
-    def __init__(self, session: AsyncSession, repository: TeamRepository) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        repository: TeamRepository,
+    ) -> None:
         self.session = session
         self.repository = repository
 
-    async def create_team(self, team_data: CreateTeamRequest) -> TeamResponse:
+    async def create_team(
+        self,
+        team_data: CreateTeamRequest,
+    ) -> TeamResponse:
         team = Team(
             **team_data.model_dump(),
         )
@@ -31,14 +38,24 @@ class TeamService:
                 team = await self.repository.create(team)
         except IntegrityError as exc:
             if "ix_teams_name" in str(exc.orig):
-                raise ConflictError("A team with this name already exists.") from exc
+                raise ConflictError(
+                    "A team with this name already exists.",
+                ) from exc
 
             raise
 
         return TeamResponse.model_validate(team)
 
-    async def get_teams(self, *, limit: int, offset: int) -> PaginatedResponse[TeamResponse]:
-        teams, total = await self.repository.get_all(limit=limit, offset=offset)
+    async def get_teams(
+        self,
+        *,
+        limit: int,
+        offset: int,
+    ) -> PaginatedResponse[TeamResponse]:
+        teams, total = await self.repository.get_all(
+            limit=limit,
+            offset=offset,
+        )
 
         return PaginatedResponse[TeamResponse](
             items=[TeamResponse.model_validate(team) for team in teams],
@@ -47,7 +64,10 @@ class TeamService:
             total=total,
         )
 
-    async def get_team(self, team_id: UUID) -> TeamResponse:
+    async def get_team(
+        self,
+        team_id: UUID,
+    ) -> TeamResponse:
         team = await self.repository.get_by_id(team_id)
 
         if team is None:
@@ -55,12 +75,26 @@ class TeamService:
 
         return TeamResponse.model_validate(team)
 
-    async def update_team(self, team_id: UUID, team_data: UpdateTeamRequest) -> TeamResponse:
-        update_data = cast(TeamUpdateData, team_data.model_dump(exclude_unset=True))
+    async def update_team(
+        self,
+        team_id: UUID,
+        team_data: UpdateTeamRequest,
+    ) -> TeamResponse:
+        update_data = cast(
+            TeamUpdateData,
+            team_data.model_dump(exclude_unset=True),
+        )
+        try:
+            async with self.session.begin():
+                if (team := await self.repository.update(team_id, update_data)) is None:
+                    raise TeamNotFoundError(team_id)
+        except IntegrityError as exc:
+            if "ix_teams_name" in str(exc.orig):
+                raise ConflictError(
+                    "A team with this name already exists.",
+                ) from exc
 
-        async with self.session.begin():
-            if (team := await self.repository.update(team_id, update_data)) is None:
-                raise TeamNotFoundError(team_id)
+            raise
 
         return TeamResponse.model_validate(team)
 
