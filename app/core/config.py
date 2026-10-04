@@ -16,6 +16,8 @@ class Settings(BaseSettings):
 
     redis_url: str
 
+    redis_key_prefix: str
+
     secret_key: SecretStr = Field(
         min_length=32,
     )
