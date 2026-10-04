@@ -100,10 +100,10 @@ async def delete_user(
     response_model=UserResponse,
 )
 async def update_user_status(
+    _: AdminUserDep,
     user_id: UUID,
     data: UpdateUserStatusRequest,
     user_service: UserServiceDep,
-    _: AdminUserDep,
 ) -> UserResponse:
     return await user_service.update_user_status(
         user_id=user_id,

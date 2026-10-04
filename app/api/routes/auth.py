@@ -129,7 +129,10 @@ async def reset_password(
     )
 
 
-@router.post("/verify-email")
+@router.post(
+    "/verify-email",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
 async def verify_email(
     request: Request,
     data: VerifyEmailRequest,
