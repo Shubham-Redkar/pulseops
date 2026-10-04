@@ -53,6 +53,8 @@ class UserService:
         )
 
         try:
+            if self.session.in_transaction():
+                await self.session.commit()
             async with self.session.begin():
                 user = await self.user_repository.create(user)
         except IntegrityError as exc:
@@ -108,6 +110,8 @@ class UserService:
         )
 
         try:
+            if self.session.in_transaction():
+                await self.session.commit()
             async with self.session.begin():
                 if (
                     user := await self.user_repository.update(
@@ -133,6 +137,8 @@ class UserService:
         return UserResponse.model_validate(user)
 
     async def delete_user(self, user_id: UUID) -> None:
+        if self.session.in_transaction():
+            await self.session.commit()
         async with self.session.begin():
             deleted = await self.user_repository.delete(user_id)
 
@@ -153,6 +159,8 @@ class UserService:
             return UserResponse.model_validate(user)
 
         try:
+            if self.session.in_transaction():
+                await self.session.commit()
             async with self.session.begin():
                 user.is_active = is_active
 
