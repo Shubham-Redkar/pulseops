@@ -74,3 +74,11 @@ class UserRepository:
         result = await self.session.execute(stmt)
 
         return result.scalar_one_or_none() is not None
+
+    async def get_by_username_for_update(
+        self,
+        username: str,
+    ) -> User | None:
+        stmt = select(User).where(User.username == username).with_for_update()
+
+        return await self.session.scalar(stmt)
