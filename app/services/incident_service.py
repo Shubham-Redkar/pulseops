@@ -1,9 +1,11 @@
+import secrets
 from typing import cast
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..core.exceptions import IncidentNotFoundError
+from ..core.config import settings
+from ..core.exceptions import IncidentNotFoundError, ServiceUnavailableError
 from ..core.redis import RedisStore
 from ..core.types import IncidentUpdateData
 from ..db.models.incident import Incident
@@ -48,25 +50,49 @@ class IncidentService:
         self,
         incident_id: UUID,
     ) -> IncidentResponse:
-        cache_key = f"incident:{incident_id}"
+        cache_key = f"{settings.redis_key_prefix}:incident:{incident_id}"
+        lock_key = f"{settings.redis_key_prefix}:incident:lock:{incident_id}"
 
         cached_incident = await self.redis_store.get(cache_key)
 
         if cached_incident is not None:
             return IncidentResponse.model_validate_json(cached_incident)
 
-        if (incident := await self.repository.get_by_id(incident_id)) is None:
-            raise IncidentNotFoundError(incident_id)
+        lock_token = secrets.token_urlsafe(32)
 
-        response = IncidentResponse.model_validate(incident)
-
-        await self.redis_store.set(
-            cache_key,
-            response.model_dump_json(),
-            ex=300,
+        lock_acquired = await self.redis_store.acquire_lock(
+            lock_key,
+            lock_token,
+            ex=5,
         )
 
-        return response
+        if not lock_acquired:
+            raise ServiceUnavailableError("Incident is currently being loaded. Please try again.")
+
+        try:
+            cached_incident = await self.redis_store.get(cache_key)
+
+            if cached_incident is not None:
+                return IncidentResponse.model_validate_json(cached_incident)
+
+            if (incident := await self.repository.get_by_id(incident_id)) is None:
+                raise IncidentNotFoundError(incident_id)
+
+            response = IncidentResponse.model_validate(incident)
+
+            await self.redis_store.set(
+                cache_key,
+                response.model_dump_json(),
+                ex=300,
+            )
+
+            return response
+
+        finally:
+            await self.redis_store.release_lock(
+                lock_key,
+                lock_token,
+            )
 
     async def get_incidents(
         self,
@@ -104,9 +130,9 @@ class IncidentService:
             ) is None:
                 raise IncidentNotFoundError(incident_id)
 
-        await self.redis_store.delete(
-            f"incident:{incident_id}",
-        )
+            await self.redis_store.delete(
+                f"{settings.redis_key_prefix}:incident:{incident_id}",
+            )
 
         return IncidentResponse.model_validate(incident)
 
@@ -120,6 +146,6 @@ class IncidentService:
             if not deleted:
                 raise IncidentNotFoundError(incident_id)
 
-        await self.redis_store.delete(
-            f"incident:{incident_id}",
-        )
+            await self.redis_store.delete(
+                f"{settings.redis_key_prefix}:incident:{incident_id}",
+            )
