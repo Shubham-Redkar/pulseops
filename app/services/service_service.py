@@ -32,6 +32,8 @@ class ServiceManager:
         service = Service(**service_data.model_dump())
 
         try:
+            if self.session.in_transaction():
+                await self.session.commit()
             async with self.session.begin():
                 service = await self.repository.create(service)
         except IntegrityError as exc:
@@ -80,6 +82,8 @@ class ServiceManager:
             service_data.model_dump(exclude_unset=True),
         )
         try:
+            if self.session.in_transaction():
+                await self.session.commit()
             async with self.session.begin():
                 if (service := await self.repository.update(service_id, update_data)) is None:
                     raise ServiceNotFoundError(service_id)
@@ -96,6 +100,8 @@ class ServiceManager:
         self,
         service_id: UUID,
     ) -> None:
+        if self.session.in_transaction():
+            await self.session.commit()
         async with self.session.begin():
             deleted = await self.repository.delete(service_id)
 

@@ -64,6 +64,8 @@ class AlertService:
             if existing_alert is not None:
                 return AlertResponse.model_validate(existing_alert)
         try:
+            if self.session.in_transaction():
+                await self.session.commit()
             async with self.session.begin():
                 existing_key = await self.idempotency_repository.get_by_key(
                     idempotency_key,
@@ -86,7 +88,7 @@ class AlertService:
 
                 incident_lock_key = (
                     f"{settings.redis_key_prefix}:"
-                    "incident:create:lock:{alert_data.service_id}:{alert_data.environment}"
+                    f"incident:create:lock:{alert_data.service_id}:{alert_data.environment}"
                 )
                 incident_lock_token = secrets.token_urlsafe(32)
 
