@@ -10,7 +10,11 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
     Attach a unique request identifier to each request.
     """
 
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+    async def dispatch(
+        self,
+        request: Request,
+        call_next: RequestResponseEndpoint,
+    ) -> Response:
         request_id_header = request.headers.get("X-Request-ID")
 
         try:
