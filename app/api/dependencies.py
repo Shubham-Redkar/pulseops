@@ -72,11 +72,10 @@ async def get_current_user(
 
     repository = UserRepository(session)
 
-    async with session.begin():
-        user = await repository.get_by_id(user_id)
+    user = await repository.get_by_id(user_id)
 
-        if user is None:
-            raise UnauthorizedError()
+    if user is None:
+        raise UnauthorizedError()
 
     return user
 
