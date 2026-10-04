@@ -5,13 +5,26 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    environment: Literal[
+        "development",
+        "testing",
+        "staging",
+        "production",
+    ] = "development"
+
     database_url: str
 
     redis_url: str
 
-    secret_key: SecretStr = Field(min_length=32)
+    secret_key: SecretStr = Field(
+        min_length=32,
+    )
 
-    jwt_algorithm: Literal["HS256", "HS384", "HS512"]
+    jwt_algorithm: Literal[
+        "HS256",
+        "HS384",
+        "HS512",
+    ]
 
     access_token_expire_minutes: int = Field(
         ge=1,
@@ -93,6 +106,11 @@ class Settings(BaseSettings):
         le=600,
     )
 
+    alert_dedup_window: int = Field(
+        ge=60,
+        le=3600,
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -100,19 +118,15 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    @field_validator("database_url")
+    @field_validator("database_url", "redis_url")
     @classmethod
-    def validate_database_url(cls, value: str) -> str:
-        if not value.strip():
-            raise ValueError("DATABASE_URL must not be empty.")
-        return value
+    def validate_urls(cls, value: str) -> str:
+        value = value.strip()
 
-    @field_validator("redis_url")
-    @classmethod
-    def validate_redis_url(cls, value: str) -> str:
-        if not value.strip():
-            raise ValueError("REDIS_URL must not be empty.")
+        if not value:
+            raise ValueError("URL setting must not be empty.")
+
         return value
 
 
-settings = Settings()  # type: ignore
+settings = Settings()  # pyright: ignore[reportCallIssue]
