@@ -4,11 +4,10 @@ from uuid import UUID
 
 from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
-from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.exceptions import ForbiddenError, InvalidTokenError, UnauthorizedError
-from ..core.redis import RedisStore, redis_client
+from ..core.redis import RedisStore, redis_store
 from ..core.security import decode_and_validate_access_token
 from ..db.dependencies import get_db
 from ..db.models.user import User
@@ -39,23 +38,11 @@ SessionDep = Annotated[
 ]
 
 
-def get_redis() -> Redis:
+def get_redis_store() -> RedisStore:
     """
-    Provide the Redis client for a request.
+    Provide the application-wide Redis store.
     """
-    return redis_client
-
-
-RedisDep = Annotated[
-    Redis,
-    Depends(get_redis),
-]
-
-
-def get_redis_store(
-    redis: RedisDep,
-) -> RedisStore:
-    return RedisStore(redis)
+    return redis_store
 
 
 RedisStoreDep = Annotated[
@@ -73,6 +60,9 @@ async def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)],
     session: SessionDep,
 ) -> User:
+    """
+    Resolve the authenticated user from the access token.
+    """
     payload = decode_and_validate_access_token(token)
 
     try:
@@ -174,6 +164,7 @@ IncidentServiceDep = Annotated[
 
 def get_alert_service(
     session: SessionDep,
+    redis_store: RedisStoreDep,
 ) -> AlertService:
     """
     Provide an alert service with its database dependencies.
@@ -183,6 +174,7 @@ def get_alert_service(
         alert_repository=AlertRepository(session),
         incident_repository=IncidentRepository(session),
         idempotency_repository=IdempotencyRepository(session),
+        redis_store=redis_store,
     )
 
 
