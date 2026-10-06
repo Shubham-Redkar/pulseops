@@ -64,8 +64,6 @@ class AlertService:
             if existing_alert is not None:
                 return AlertResponse.model_validate(existing_alert)
         try:
-            if self.session.in_transaction():
-                await self.session.commit()
             async with self.session.begin():
                 existing_key = await self.idempotency_repository.get_by_key(
                     idempotency_key,

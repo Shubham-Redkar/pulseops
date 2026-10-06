@@ -81,6 +81,27 @@ class RedisStore:
         except RedisError:
             return False
 
+    async def set_required(
+        self,
+        key: str,
+        value: str,
+        *,
+        ex: int,
+    ) -> bool:
+        self._validate_expiry(ex)
+
+        try:
+            result = await self._client.set(
+                key,
+                value,
+                ex=ex,
+            )
+            return bool(result)
+        except RedisError as exc:
+            raise ServiceUnavailableError(
+                "Redis is not available.",
+            ) from exc
+
     async def delete(
         self,
         key: str,
@@ -90,6 +111,18 @@ class RedisStore:
             return bool(deleted)
         except RedisError:
             return False
+
+    async def exists(
+        self,
+        key: str,
+    ) -> bool:
+        try:
+            result = await self._client.exists(key)
+            return bool(result)
+        except RedisError as exc:
+            raise ServiceUnavailableError(
+                "Redis is not available.",
+            ) from exc
 
     async def increment(
         self,

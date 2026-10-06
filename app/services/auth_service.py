@@ -16,6 +16,7 @@ from ..core.rate_limit import (
 )
 from ..core.redis import RedisStore
 from ..core.security import (
+    AccessTokenPayload,
     create_access_token,
     generate_email_verification_token,
     generate_password_reset_token,
@@ -102,8 +103,6 @@ class AuthService:
         )
 
         try:
-            if self.session.in_transaction():
-                await self.session.commit()
             async with self.session.begin():
                 user = await self.user_repository.create(user)
 
@@ -156,8 +155,6 @@ class AuthService:
         login_failed = False
         user_id: UUID | None = None
 
-        if self.session.in_transaction():
-            await self.session.commit()
         async with self.session.begin():
             user = await self.user_repository.get_by_username_for_update(
                 username,
@@ -211,8 +208,6 @@ class AuthService:
         )
 
         try:
-            if self.session.in_transaction():
-                await self.session.commit()
             async with self.session.begin():
                 await self.refresh_token_repository.create(
                     refresh_token=refresh_token_record,
@@ -244,7 +239,9 @@ class AuthService:
 
         token_hash = hash_refresh_token(raw_refresh_token)
 
-        refresh_token_record = await self.refresh_token_repository.get_by_hash(token_hash)
+        refresh_token_record = await self.refresh_token_repository.get_by_hash(
+            token_hash,
+        )
 
         if not refresh_token_record:
             raise UnauthorizedError("Invalid refresh token.")
@@ -273,12 +270,13 @@ class AuthService:
         new_refresh_token_record = RefreshToken(
             user_id=user.id,
             token_hash=new_refresh_token_hash,
-            expires_at=now + timedelta(days=settings.refresh_token_expire_days),
+            expires_at=now
+            + timedelta(
+                days=settings.refresh_token_expire_days,
+            ),
         )
 
         try:
-            if self.session.in_transaction():
-                await self.session.commit()
             async with self.session.begin():
                 await self.refresh_token_repository.revoke(
                     refresh_token_record,
@@ -300,7 +298,11 @@ class AuthService:
             refresh_expires_in=settings.refresh_token_expire_days * 24 * 60 * 60,
         )
 
-    async def logout(self, data: RefreshTokenRequest) -> None:
+    async def logout(
+        self,
+        data: RefreshTokenRequest,
+        token_payload: AccessTokenPayload,
+    ) -> None:
         raw_refresh_token = data.refresh_token.get_secret_value()
 
         token_hash = hash_refresh_token(raw_refresh_token)
@@ -318,10 +320,23 @@ class AuthService:
         if refresh_token_record.expires_at <= now:
             raise UnauthorizedError("Refresh token has expired.")
 
-        if self.session.in_transaction():
-            await self.session.commit()
         async with self.session.begin():
-            await self.refresh_token_repository.revoke(refresh_token_record)
+            await self.refresh_token_repository.revoke(
+                refresh_token_record,
+            )
+
+        access_token_ttl = max(
+            token_payload["exp"] - int(now.timestamp()),
+            1,
+        )
+
+        revocation_key = f"{settings.redis_key_prefix}:auth:revoked:{token_payload['jti']}"
+
+        await self.redis_store.set_required(
+            revocation_key,
+            "1",
+            ex=access_token_ttl,
+        )
 
     async def change_password(
         self,
@@ -340,8 +355,6 @@ class AuthService:
         ):
             raise ConflictError("New password must be different from the current password.")
 
-        if self.session.in_transaction():
-            await self.session.commit()
         async with self.session.begin():
             current_user.password_hash = hash_password(
                 data.new_password.get_secret_value(),
@@ -380,8 +393,6 @@ class AuthService:
         )
 
         try:
-            if self.session.in_transaction():
-                await self.session.commit()
             async with self.session.begin():
                 await self.password_reset_token_repository.invalidate_unused_for_user(user.id)
                 await self.password_reset_token_repository.create(reset_token)
@@ -428,8 +439,6 @@ class AuthService:
             raise ConflictError("New password must be different from the current password.")
 
         try:
-            if self.session.in_transaction():
-                await self.session.commit()
             async with self.session.begin():
                 user.password_hash = hash_password(
                     data.new_password.get_secret_value(),
@@ -481,8 +490,6 @@ class AuthService:
             raise ConflictError("Email is already verified.")
 
         try:
-            if self.session.in_transaction():
-                await self.session.commit()
             async with self.session.begin():
                 user.email_verified = True
                 verification_token.used_at = now

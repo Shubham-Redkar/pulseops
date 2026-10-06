@@ -11,7 +11,7 @@ from ...schemas.auth import (
     VerifyEmailRequest,
 )
 from ...schemas.user import UserResponse
-from ..dependencies import AuthServiceDep, CurrentUserDep
+from ..dependencies import AuthServiceDep, CurrentTokenPayloadDep, CurrentUserDep
 
 router = APIRouter(
     prefix="/auth",
@@ -78,9 +78,13 @@ async def refresh(
 )
 async def logout(
     data: RefreshTokenRequest,
+    token_payload: CurrentTokenPayloadDep,
     auth_service: AuthServiceDep,
 ) -> None:
-    await auth_service.logout(data)
+    await auth_service.logout(
+        data,
+        token_payload,
+    )
 
 
 @router.post(
