@@ -113,6 +113,11 @@ class Settings(BaseSettings):
         le=3600,
     )
 
+    alert_idempotency_window: int = Field(
+        ge=60,
+        le=3600,
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

@@ -54,6 +54,8 @@ class AlertService:
 
         dedup_key = f"{settings.redis_key_prefix}:alert:dedup:{fingerprint}"
 
+        idempotency_redis_key = f"{settings.redis_key_prefix}:idempotency:{idempotency_key}"
+
         cached_alert_id = await self.redis_store.get(dedup_key)
 
         if cached_alert_id is not None:
@@ -63,6 +65,19 @@ class AlertService:
 
             if existing_alert is not None:
                 return AlertResponse.model_validate(existing_alert)
+
+        cached_idempotency_alert_id = await self.redis_store.get(
+            idempotency_redis_key,
+        )
+
+        if cached_idempotency_alert_id is not None:
+            existing_alert = await self.alert_repository.get_by_id(
+                UUID(cached_idempotency_alert_id),
+            )
+
+            if existing_alert is not None:
+                return AlertResponse.model_validate(existing_alert)
+
         try:
             async with self.session.begin():
                 existing_key = await self.idempotency_repository.get_by_key(
@@ -142,6 +157,12 @@ class AlertService:
 
                 await self.idempotency_repository.create(
                     idempotency_record,
+                )
+
+                await self.redis_store.set(
+                    idempotency_redis_key,
+                    str(alert.id),
+                    ex=settings.alert_idempotency_window,
                 )
 
                 await self.redis_store.set(
