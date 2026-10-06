@@ -60,6 +60,7 @@ def create_error_response(
     status_code: int,
     code: ErrorCode,
     message: str,
+    headers: dict[str, str] | None = None,
 ) -> JSONResponse:
     """
     Create a standardized API error response.
@@ -73,6 +74,7 @@ def create_error_response(
     return JSONResponse(
         status_code=status_code,
         content=error.model_dump(mode="json"),
+        headers=headers,
     )
 
 
@@ -108,12 +110,30 @@ async def app_exception_handler(
 
     status_code, error_code = get_exception_mapping(exc)
 
-    return create_error_response(
+    headers: dict[str, str] | None = None
+
+    if isinstance(exc, RateLimitExceededError):
+        headers = {
+            "X-RateLimit-Limit": str(exc.limit),
+            "X-RateLimit-Remaining": str(exc.remaining),
+            "X-RateLimit-Reset": str(exc.reset),
+            "Retry-After": str(exc.reset),
+        }
+
+    response = create_error_response(
         request=request,
         status_code=status_code,
         code=error_code,
         message=exc.message,
+        headers=headers,
     )
+
+    if isinstance(exc, RateLimitExceededError):
+        response.headers["X-RateLimit-Limit"] = str(exc.limit)
+        response.headers["X-RateLimit-Remaining"] = str(exc.remaining)
+        response.headers["X-RateLimit-Reset"] = str(exc.reset)
+
+    return response
 
 
 async def unhandled_exception_handler(
