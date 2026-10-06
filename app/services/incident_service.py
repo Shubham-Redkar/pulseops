@@ -41,8 +41,6 @@ class IncidentService:
             **incident_data.model_dump(),
         )
 
-        if self.session.in_transaction():
-            await self.session.commit()
         async with self.session.begin():
             incident = await self.repository.create(incident)
 
@@ -123,8 +121,6 @@ class IncidentService:
             incident_data.model_dump(exclude_unset=True),
         )
 
-        if self.session.in_transaction():
-            await self.session.commit()
         async with self.session.begin():
             if (
                 incident := await self.repository.update(
@@ -144,8 +140,6 @@ class IncidentService:
         self,
         incident_id: UUID,
     ) -> None:
-        if self.session.in_transaction():
-            await self.session.commit()
         async with self.session.begin():
             deleted = await self.repository.delete(incident_id)
 

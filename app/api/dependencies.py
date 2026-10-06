@@ -6,9 +6,10 @@ from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..core.config import settings
 from ..core.exceptions import ForbiddenError, InvalidTokenError, UnauthorizedError
 from ..core.redis import RedisStore, redis_store
-from ..core.security import decode_and_validate_access_token
+from ..core.security import AccessTokenPayload, decode_and_validate_access_token
 from ..db.dependencies import get_db
 from ..db.models.user import User
 from ..repositories import (
@@ -59,11 +60,17 @@ oauth2_scheme = OAuth2PasswordBearer(
 async def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)],
     session: SessionDep,
+    redis_store: RedisStoreDep,
 ) -> User:
     """
     Resolve the authenticated user from the access token.
     """
     payload = decode_and_validate_access_token(token)
+
+    revocation_key = f"{settings.redis_key_prefix}:auth:revoked:{payload['jti']}"
+
+    if await redis_store.exists(revocation_key):
+        raise UnauthorizedError("Access token has been revoked.")
 
     try:
         user_id = UUID(payload["sub"])
@@ -83,6 +90,18 @@ async def get_current_user(
 CurrentUserDep = Annotated[
     User,
     Depends(get_current_user),
+]
+
+
+async def get_current_token_payload(
+    token: Annotated[str, Depends(oauth2_scheme)],
+) -> AccessTokenPayload:
+    return decode_and_validate_access_token(token)
+
+
+CurrentTokenPayloadDep = Annotated[
+    AccessTokenPayload,
+    Depends(get_current_token_payload),
 ]
 
 

@@ -34,8 +34,6 @@ class TeamService:
         )
 
         try:
-            if self.session.in_transaction():
-                await self.session.commit()
             async with self.session.begin():
                 team = await self.repository.create(team)
         except IntegrityError as exc:
@@ -87,8 +85,6 @@ class TeamService:
             team_data.model_dump(exclude_unset=True),
         )
         try:
-            if self.session.in_transaction():
-                await self.session.commit()
             async with self.session.begin():
                 if (team := await self.repository.update(team_id, update_data)) is None:
                     raise TeamNotFoundError(team_id)
@@ -103,8 +99,6 @@ class TeamService:
         return TeamResponse.model_validate(team)
 
     async def delete_team(self, team_id: UUID) -> None:
-        if self.session.in_transaction():
-            await self.session.commit()
         async with self.session.begin():
             deleted = await self.repository.delete(team_id)
 
