@@ -1,5 +1,18 @@
-from fastapi import APIRouter, Request, status
+from fastapi import (
+    APIRouter,
+    Request,
+    Response,
+    status,
+)
 
+from ...core.rate_limit import (
+    check_forgot_password_rate_limit,
+    check_login_ip_rate_limit,
+    check_login_username_rate_limit,
+    check_password_reset_rate_limit,
+    check_refresh_rate_limit,
+    check_verify_email_rate_limit,
+)
 from ...schemas.auth import (
     ChangePasswordRequest,
     ForgotPasswordRequest,
@@ -11,7 +24,13 @@ from ...schemas.auth import (
     VerifyEmailRequest,
 )
 from ...schemas.user import UserResponse
-from ..dependencies import AuthServiceDep, CurrentTokenPayloadDep, CurrentUserDep
+from ..dependencies import (
+    AuthServiceDep,
+    CurrentTokenPayloadDep,
+    CurrentUserDep,
+    RedisStoreDep,
+)
+from ..utils import set_rate_limit_headers
 
 router = APIRouter(
     prefix="/auth",
@@ -43,10 +62,29 @@ async def register(
 )
 async def login(
     request: Request,
+    response: Response,
     data: LoginRequest,
     auth_service: AuthServiceDep,
+    redis_store: RedisStoreDep,
 ) -> TokenResponse:
     client_ip = request.client.host if request.client else "unknown"
+
+    ip_limit, ip_remaining, ip_reset = await check_login_ip_rate_limit(
+        redis_store,
+        client_ip,
+    )
+
+    username_limit, username_remaining, username_reset = await check_login_username_rate_limit(
+        redis_store,
+        data.username,
+    )
+
+    set_rate_limit_headers(
+        response,
+        limit=min(ip_limit, username_limit),
+        remaining=min(ip_remaining, username_remaining),
+        reset=max(ip_reset, username_reset),
+    )
 
     return await auth_service.login(
         data,
@@ -61,10 +99,24 @@ async def login(
 )
 async def refresh(
     request: Request,
+    response: Response,
     data: RefreshTokenRequest,
     auth_service: AuthServiceDep,
+    redis_store: RedisStoreDep,
 ) -> TokenResponse:
     client_ip = request.client.host if request.client else "unknown"
+
+    limit, remaining, reset = await check_refresh_rate_limit(
+        redis_store,
+        client_ip,
+    )
+
+    set_rate_limit_headers(
+        response,
+        limit=limit,
+        remaining=remaining,
+        reset=reset,
+    )
 
     return await auth_service.refresh(
         data,
@@ -105,10 +157,24 @@ async def change_password(
 )
 async def forgot_password(
     request: Request,
+    response: Response,
     data: ForgotPasswordRequest,
     auth_service: AuthServiceDep,
+    redis_store: RedisStoreDep,
 ) -> None:
     client_ip = request.client.host if request.client else "unknown"
+
+    limit, remaining, reset = await check_forgot_password_rate_limit(
+        redis_store,
+        client_ip,
+    )
+
+    set_rate_limit_headers(
+        response,
+        limit=limit,
+        remaining=remaining,
+        reset=reset,
+    )
 
     await auth_service.forgot_password(
         data,
@@ -122,10 +188,24 @@ async def forgot_password(
 )
 async def reset_password(
     request: Request,
+    response: Response,
     data: ResetPasswordRequest,
     auth_service: AuthServiceDep,
+    redis_store: RedisStoreDep,
 ) -> None:
     client_ip = request.client.host if request.client else "unknown"
+
+    limit, remaining, reset = await check_password_reset_rate_limit(
+        redis_store,
+        client_ip,
+    )
+
+    set_rate_limit_headers(
+        response,
+        limit=limit,
+        remaining=remaining,
+        reset=reset,
+    )
 
     await auth_service.reset_password(
         data,
@@ -139,10 +219,24 @@ async def reset_password(
 )
 async def verify_email(
     request: Request,
+    response: Response,
     data: VerifyEmailRequest,
     auth_service: AuthServiceDep,
+    redis_store: RedisStoreDep,
 ) -> None:
     client_ip = request.client.host if request.client else "unknown"
+
+    limit, remaining, reset = await check_verify_email_rate_limit(
+        redis_store,
+        client_ip,
+    )
+
+    set_rate_limit_headers(
+        response,
+        limit=limit,
+        remaining=remaining,
+        reset=reset,
+    )
 
     await auth_service.verify_email(
         data,

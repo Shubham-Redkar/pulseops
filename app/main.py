@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from .api.errors import register_exception_handlers
+from .api.exception_handlers import register_exception_handlers
 from .api.routes.router import api_router
 from .core.redis import redis_store
 from .db.dependencies import check_database

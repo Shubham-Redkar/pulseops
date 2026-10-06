@@ -1,6 +1,11 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Header, status
+from fastapi import (
+    APIRouter,
+    Header,
+    Response,
+    status,
+)
 
 from ...core.rate_limit import check_alert_rate_limit
 from ...schemas.alert import AlertResponse, CreateAlertRequest
@@ -10,6 +15,7 @@ from ..dependencies import (
     CurrentUserDep,
     RedisStoreDep,
 )
+from ..utils import set_rate_limit_headers
 
 router = APIRouter(
     prefix="/alerts",
@@ -23,6 +29,7 @@ router = APIRouter(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_alert(
+    response: Response,
     current_user: AdminOrAnalystUserDep,
     alert_data: CreateAlertRequest,
     alert_service: AlertServiceDep,
@@ -34,9 +41,16 @@ async def create_alert(
         max_length=255,
     ),
 ) -> AlertResponse:
-    await check_alert_rate_limit(
+    limit, remaining, reset = await check_alert_rate_limit(
         redis_store,
         current_user.id,
+    )
+
+    set_rate_limit_headers(
+        response,
+        limit=limit,
+        remaining=remaining,
+        reset=reset,
     )
 
     return await alert_service.create_alert(
