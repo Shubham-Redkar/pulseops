@@ -69,9 +69,16 @@ class RateLimitExceededError(AppException):
 
     def __init__(
         self,
+        *,
+        limit: int,
+        remaining: int,
+        reset: int,
         detail: str = "Rate limit exceeded. Try again later.",
     ) -> None:
         super().__init__(detail)
+        self.limit = limit
+        self.remaining = remaining
+        self.reset = reset
 
 
 class UserNotFoundError(NotFoundError):

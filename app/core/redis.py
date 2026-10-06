@@ -124,6 +124,17 @@ class RedisStore:
                 "Redis is not available.",
             ) from exc
 
+    async def ttl(
+        self,
+        key: str,
+    ) -> int:
+        try:
+            return int(await self._client.ttl(key))
+        except RedisError as exc:
+            raise ServiceUnavailableError(
+                "Redis is not available.",
+            ) from exc
+
     async def increment(
         self,
         key: str,
